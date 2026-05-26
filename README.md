@@ -1,32 +1,25 @@
-# NF26_Smart_Teem
+# NF26 - Projet SmartTeem
 
-Collaboration project between Smart Teem and UTC for NF26 module (2022-2027).
+Projet collaboratif entre l'entreprise Smart Teem et l’UV NF26, semestre P26.
 
 ## Description
 
-This repository contains hospital database inputs and related project files for the NF26 AI07 project.
+Ce dépôt contient les données d’entrée de la base hospitalière et les fichiers associés au projet.
 
-## Project Structure
+## Structure du projet 
 
-- **Inputs_Projets_NF26_AI07/**: Main project folder
-  - **Data Hospital/**: Hospital database files organized by date
-    - Multiple dated folders (BDD_HOSPITAL_YYYYMMDD) containing:
-      - CHAMBRE (Rooms)
-      - CONSULTATION (Consultations)
-      - HOSPITALISATION (Hospitalizations)
-      - MEDICAMENT (Medications)
-      - PATIENT (Patients)
-      - PERSONNEL (Staff)
-      - TRAITEMENT (Treatments)
+-Inputs_Projets_NF26_AI07/ : Dossier principal du projet
+  -Data Hospital/ : Fichiers de base de données hospitalière organisés par date
+    -Plusieurs dossiers datés (BDD_HOSPITAL_YYYYMMDD) contenant :
+      CHAMBRE (Chambres)
+      CONSULTATION (Consultations)
+      HOSPITALISATION (Hospitalisations)
+      MEDICAMENT (Médicaments)
+      PATIENT (Patients)
+      PERSONNEL (Personnel)
+      TRAITEMENT (Traitements)
 
-## Data Structure
+## Structure des données
 
-Each database folder contains daily snapshots of hospital data in text format.
+Chaque dossier de base de données contient des batchs quotidiens des données hospitalières au format texte.
 
-## License
-
-[Specify your license here]
-
-## Contact
-
-For questions about this project, please contact the project team.
