@@ -1,0 +1,241 @@
+// ============================================================
+// MPD - Couche Socle (SOC) + Technique (TCH) - Hôpital
+// À coller sur https://dbdiagram.io
+// ============================================================
+
+// ------------------------------------------------------------
+// SCHÉMA SOC - Tables de référence
+// ------------------------------------------------------------
+
+Table SOC.R_ROOM {
+  ROOM_NUM      INTEGER      [not null, note: "Numéro de chambre - PK / PI"]
+  ROOM_NAME     VARCHAR(20)  [not null, note: "Nom de la chambre"]
+  FLOR_NUM      BYTEINT      [note: "Numéro d'étage"]
+  BULD_NAME     VARCHAR(20)  [note: "Nom du bâtiment"]
+  ROOM_TYP      VARCHAR(10)  [note: "Type de chambre (simple, double)"]
+  ROOM_DAY_RATE SMALLINT     [not null, note: "Tarif journalier"]
+  CRTN_DT       DATE         [not null, note: "Date de création"]
+  EXEC_ID       INTEGER      [not null, note: "Identifiant de l'exécution"]
+
+  indexes {
+    ROOM_NUM [pk]
+  }
+}
+
+Table SOC.R_PART {
+  PART_ID INTEGER      [not null, note: "Identifiant du tiers - PK / PI (surrogate key, séquence incrémentale)"]
+  SRC_ID  INTEGER      [not null, note: "Identifiant source (ID_PERSONNEL ou ID_PATIENT)"]
+  SRC_TYP VARCHAR(50)  [not null, note: "Type de la source (fonction personnel ou 'Patient')"]
+
+  indexes {
+    PART_ID [pk]
+  }
+
+  Note: "Table tiers - regroupe personnel et patients via surrogate key"
+}
+
+Table SOC.R_MEDC {
+  MEDC_ID   INTEGER      [not null, note: "Identifiant médicament - PK / PI (surrogate key, séquence incrémentale)"]
+  MEDC_CD   VARCHAR(10)  [not null, note: "Code du médicament"]
+  MEDC_NAME VARCHAR(250) [note: "Nom du médicament"]
+  MEDC_COND VARCHAR(100) [note: "Conditionnement"]
+  MEDC_CATG VARCHAR(100) [not null, note: "Catégorie de médicament"]
+  MANF_BRND VARCHAR(100) [not null, note: "Marque du fabricant"]
+  EXEC_ID   INTEGER      [not null, note: "Identifiant de l'exécution"]
+
+  indexes {
+    MEDC_ID [pk]
+  }
+
+  Note: "Table référentiel médicaments - surrogate key sur (CD_MEDICAMENT, CATG_MEDICAMENT, MARQUE_FABRI)"
+}
+
+// ------------------------------------------------------------
+// SCHÉMA SOC - Tables opérationnelles
+// ------------------------------------------------------------
+
+Table SOC.O_INDV {
+  PART_ID        INTEGER      [not null, note: "Identifiant individu - PK / PI (FK -> R_PART)"]
+  INDV_NAME      VARCHAR(100) [not null, note: "Nom de l'individu"]
+  INDV_FIRS_NAME VARCHAR(100) [not null, note: "Prénom de l'individu"]
+  INDV_STTS_CD   VARCHAR(10)  [not null, note: "Statut de l'individu"]
+  CRTN_DTTM      TIMESTAMP(0) [not null, note: "Date heure de création"]
+  UPDT_DTTM      TIMESTAMP(0) [not null, note: "Date heure de mise à jour"]
+  BIRT_DT        DATE         [note: "Date de naissance (patients uniquement)"]
+  BIRT_CITY      VARCHAR(100) [note: "Ville de naissance (patients uniquement)"]
+  BIRT_CNTR      VARCHAR(100) [note: "Pays de naissance (patients uniquement)"]
+  SOCL_NUM       VARCHAR(15)  [note: "Numéro de sécurité sociale (patients uniquement)"]
+  EXEC_ID        INTEGER      [not null, note: "Identifiant de l'exécution"]
+
+  indexes {
+    PART_ID [pk]
+  }
+
+  Note: "Individus - regroupe personnel et patients"
+}
+
+Table SOC.O_STFF {
+  PART_ID        INTEGER      [not null, note: "Identifiant personnel - PK / PI (FK -> R_PART)"]
+  WORK_STRT_DTTM TIMESTAMP(0) [not null, note: "Date heure de début d'activité"]
+  WORK_END_DTTM  TIMESTAMP(0) [note: "Date heure de fin d'activité"]
+  WORK_END_RESN  VARCHAR(100) [note: "Raison de la fin d'activité"]
+  EXEC_ID        INTEGER      [not null, note: "Identifiant de l'exécution"]
+
+  indexes {
+    PART_ID [pk]
+  }
+
+  Note: "Personnel hospitalier - extension de O_INDV pour le personnel"
+}
+
+Table SOC.O_TELP {
+  PART_ID       INTEGER      [not null, note: "Identifiant individu - PK / PI (FK -> R_PART)"]
+  STRT_VALD_DTTM TIMESTAMP(0) [not null, note: "Date heure début validité - PK composite"]
+  END_VALD_DTTM  TIMESTAMP(0) [not null, note: "Date heure fin de validité"]
+  CNTR_IND      VARCHAR(5)   [note: "Indicatif pays"]
+  TELP_NUM      VARCHAR(20)  [not null, note: "Numéro de téléphone"]
+  EXEC_ID       INTEGER      [not null, note: "Identifiant de l'exécution"]
+
+  indexes {
+    (PART_ID, STRT_VALD_DTTM) [pk]
+  }
+
+  Note: "Téléphones des patients - historisé par date de validité"
+}
+
+Table SOC.O_ADDR {
+  PART_ID        INTEGER      [not null, note: "Identifiant individu - PK / PI (FK -> R_PART)"]
+  STRT_VALD_DTTM TIMESTAMP(0) [not null, note: "Date heure début validité - PK composite"]
+  END_VALD_DTTM  TIMESTAMP(0) [not null, note: "Date heure fin de validité"]
+  STRT_NUM       VARCHAR(10)  [not null, note: "Numéro de voie"]
+  STRT_DSC       VARCHAR(250) [not null, note: "Libellé de voie"]
+  COMP_STRT      VARCHAR(250) [note: "Complément d'adresse"]
+  POST_CD        VARCHAR(10)  [not null, note: "Code postal"]
+  CITY_NAME      VARCHAR(100) [note: "Ville"]
+  CNTR_NAME      VARCHAR(100) [note: "Pays"]
+  EXEC_ID        INTEGER      [not null, note: "Identifiant de l'exécution"]
+
+  indexes {
+    (PART_ID, STRT_VALD_DTTM) [pk]
+  }
+
+  Note: "Adresses des patients - historisé par date de validité"
+}
+
+Table SOC.O_CONS {
+  CONS_ID        INTEGER      [not null, note: "Identifiant consultation - PK"]
+  STFF_ID        INTEGER      [not null, note: "Identifiant personnel (FK -> R_PART)"]
+  PATN_ID        INTEGER      [not null, note: "Identifiant patient - PI (FK -> R_PART)"]
+  CONS_STRT_DTTM TIMESTAMP(0) [not null, note: "Date heure début consultation"]
+  CONS_END_DTTM  TIMESTAMP(0) [not null, note: "Date heure fin consultation"]
+  PATN_WEGH      INTEGER      [not null, note: "Poids du patient"]
+  PATN_TEMP      INTEGER      [note: "Température du patient"]
+  TEMP_UNIT      VARCHAR(15)  [note: "Unité de température"]
+  BLD_PRSS       INTEGER      [note: "Tension artérielle"]
+  PATH_DSC       VARCHAR(250) [note: "Description de la pathologie"]
+  DIBT_IND       BYTEINT      [note: "Positif au diabète (1=True, 0=False)"]
+  TRET_ID        TIMESTAMP(0) [note: "Identifiant du traitement (FK -> O_TRET)"]
+  HOSP_IND       BYTEINT      [note: "Consultation entraînant hospitalisation (1=True, 0=False)"]
+  EXEC_ID        INTEGER      [not null, note: "Identifiant de l'exécution"]
+
+  indexes {
+    CONS_ID [pk]
+  }
+}
+
+Table SOC.O_TRET {
+  TRET_ID        INTEGER      [not null, note: "Identifiant traitement - PK / PI"]
+  MEDC_ID        INTEGER      [note: "Identifiant médicament (FK -> R_MEDC)"]
+  MEDC_QTY       SMALLINT     [note: "Quantité médicament"]
+  DOSG_DSC       VARCHAR(100) [not null, note: "Description posologie"]
+  CONS_ID        INTEGER      [not null, note: "Identifiant consultation (FK -> O_CONS)"]
+  TRET_CRTN_DTTM TIMESTAMP(0) [not null, note: "Date heure création traitement"]
+  EXEC_ID        INTEGER      [not null, note: "Identifiant de l'exécution"]
+
+  indexes {
+    TRET_ID [pk]
+  }
+}
+
+Table SOC.O_HOSP {
+  HOSP_ID        INTEGER      [not null, note: "Identifiant hospitalisation - PK"]
+  CONS_ID        INTEGER      [not null, note: "Identifiant consultation - PI (FK -> O_CONS)"]
+  ROOM_NUM       SMALLINT     [not null, note: "Numéro de chambre (FK -> R_ROOM)"]
+  HOSP_STRT_DTTM TIMESTAMP(0) [not null, note: "Date heure début hospitalisation"]
+  HOSP_END_DTTM  TIMESTAMP(0) [not null, note: "Date heure fin hospitalisation"]
+  HOSP_FINL_RATE TIMESTAMP(0) [not null, note: "Coût de l'hospitalisation (type à corriger en DECIMAL)"]
+  STFF_ID        INTEGER      [not null, note: "Identifiant personnel responsable (FK -> R_PART)"]
+  EXEC_ID        INTEGER      [not null, note: "Identifiant de l'exécution"]
+
+  indexes {
+    HOSP_ID [pk]
+  }
+}
+
+// ------------------------------------------------------------
+// SCHÉMA TCH - Tables techniques de suivi
+// ------------------------------------------------------------
+
+Table TCH.T_SUIV_RUN {
+  RUN_ID        INTEGER      [not null, note: "Identifiant du run - PK / PI (séquence incrémentale)"]
+  RUN_STRT_DTTM TIMESTAMP(0) [not null, note: "Date heure début du run"]
+  RUN_END_DTTM  TIMESTAMP(0) [note: "Date heure fin du run"]
+  RUN_STTS_CD   VARCHAR(10)  [not null, note: "Statut du run (OK, KO, ENC)"]
+
+  indexes {
+    RUN_ID [pk]
+  }
+}
+
+Table TCH.T_SUIV_TRMT {
+  EXEC_ID        INTEGER      [not null, note: "Identifiant d'exécution - PK / PI (séquence incrémentale)"]
+  RUN_ID         INTEGER      [not null, note: "Identifiant du run (FK -> T_SUIV_RUN)"]
+  SCRPT_NAME     VARCHAR(250) [not null, note: "Nom du script exécuté"]
+  EXEC_STRT_DTTM TIMESTAMP(0) [not null, note: "Date heure début d'exécution"]
+  EXEC_END_DTTM  TIMESTAMP(0) [note: "Date heure fin d'exécution"]
+  EXEC_STTS_CD   VARCHAR(10)  [not null, note: "Statut d'exécution (OK, KO, ENC)"]
+
+  indexes {
+    EXEC_ID [pk]
+  }
+}
+
+// ------------------------------------------------------------
+// RELATIONS (clés étrangères logiques)
+// ------------------------------------------------------------
+
+// R_PART -> O_INDV (1 tiers = 1 individu)
+Ref: SOC.R_PART.PART_ID < SOC.O_INDV.PART_ID
+
+// R_PART -> O_STFF (1 tiers personnel = 1 fiche staff)
+Ref: SOC.R_PART.PART_ID < SOC.O_STFF.PART_ID
+
+// R_PART -> O_TELP (1 tiers patient peut avoir N téléphones historisés)
+Ref: SOC.R_PART.PART_ID < SOC.O_TELP.PART_ID
+
+// R_PART -> O_ADDR (1 tiers patient peut avoir N adresses historisées)
+Ref: SOC.R_PART.PART_ID < SOC.O_ADDR.PART_ID
+
+// R_PART -> O_CONS (personnel qui consulte)
+Ref: SOC.R_PART.PART_ID < SOC.O_CONS.STFF_ID
+
+// R_PART -> O_CONS (patient consulté)
+Ref: SOC.R_PART.PART_ID < SOC.O_CONS.PATN_ID
+
+// R_PART -> O_HOSP (personnel responsable de l'hospitalisation)
+Ref: SOC.R_PART.PART_ID < SOC.O_HOSP.STFF_ID
+
+// R_MEDC -> O_TRET (1 médicament peut être dans N traitements)
+Ref: SOC.R_MEDC.MEDC_ID < SOC.O_TRET.MEDC_ID
+
+// O_CONS -> O_TRET (1 consultation peut avoir 1 traitement)
+Ref: SOC.O_CONS.CONS_ID < SOC.O_TRET.CONS_ID
+
+// O_CONS -> O_HOSP (1 consultation peut entraîner 1 hospitalisation)
+Ref: SOC.O_CONS.CONS_ID < SOC.O_HOSP.CONS_ID
+
+// R_ROOM -> O_HOSP (1 chambre peut accueillir N hospitalisations)
+Ref: SOC.R_ROOM.ROOM_NUM < SOC.O_HOSP.ROOM_NUM
+
+// TCH : suivi run -> suivi traitement
+Ref: TCH.T_SUIV_RUN.RUN_ID < TCH.T_SUIV_TRMT.RUN_ID
