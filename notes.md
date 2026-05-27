@@ -1,0 +1,1 @@
+Est-ce que c'est normal qu'il y ai des attributs qui sont indiqués comme nullable en staging mais qui sont utilisés comme primary key ? cf. NO_CHAMBRE par exemple
