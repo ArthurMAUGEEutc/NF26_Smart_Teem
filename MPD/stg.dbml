@@ -1,4 +1,4 @@
-// MPD staging pour https://dbdiagram.io
+// MPD Staging pour https://dbdiagram.io
 
 Table STG.CHAMBRE {
   NO_CHAMBRE    INTEGER     

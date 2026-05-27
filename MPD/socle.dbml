@@ -1,0 +1,217 @@
+// MPD Socle pour https://dbdiagram.io
+
+Table SOC.R_ROOM {
+  ROOM_NUM      INTEGER      [not null]
+  ROOM_NAME     VARCHAR(20)  [not null]
+  FLOR_NUM      BYTEINT      
+  BULD_NAME     VARCHAR(20) 
+  ROOM_TYP      VARCHAR(10)  
+  ROOM_DAY_RATE SMALLINT     [not null]
+  CRTN_DT       DATE         [not null]
+  EXEC_ID       INTEGER      [not null]
+
+  indexes {
+    ROOM_NUM [pk]
+  }
+}
+
+
+Table SOC.O_TRET {
+  TRET_ID        INTEGER      [not null]
+  MEDC_ID        INTEGER      
+  MEDC_QTY       SMALLINT     
+  DOSG_DSC       VARCHAR(100) [not null]
+  CONS_ID        INTEGER      [not null]
+  TRET_CRTN_DTTM TIMESTAMP(0) [not null]
+  EXEC_ID        INTEGER      [not null]
+
+  indexes {
+    TRET_ID [pk]
+  }
+}
+
+Table SOC.R_PART {
+  PART_ID INTEGER      [not null]
+  SRC_ID  INTEGER      [not null]
+  SRC_TYP VARCHAR(50)  [not null]
+
+  indexes {
+    PART_ID [pk]
+  }
+}
+
+Table SOC.O_INDV {
+  PART_ID        INTEGER      [not null]
+  INDV_NAME      VARCHAR(100) [not null]
+  INDV_FIRS_NAME VARCHAR(100) [not null]
+  INDV_STTS_CD   VARCHAR(10)  [not null]
+  CRTN_DTTM      TIMESTAMP(0) [not null]
+  UPDT_DTTM      TIMESTAMP(0) [not null]
+  BIRT_DT        DATE         
+  BIRT_CITY      VARCHAR(100) 
+  BIRT_CNTR      VARCHAR(100) 
+  SOCL_NUM       VARCHAR(15)  
+  EXEC_ID        INTEGER      [not null]
+
+  indexes {
+    PART_ID [pk]
+  }
+}
+
+Table SOC.O_STFF {
+  PART_ID        INTEGER      [not null]
+  WORK_STRT_DTTM TIMESTAMP(0) [not null]
+  WORK_END_DTTM  TIMESTAMP(0) 
+  WORK_END_RESN  VARCHAR(100) 
+  EXEC_ID        INTEGER      [not null]
+
+  indexes {
+    PART_ID [pk]
+  }
+}
+
+Table SOC.O_TELP {
+  PART_ID       INTEGER      [not null]
+  CNTR_IND      VARCHAR(5)   
+  TELP_NUM      VARCHAR(20)  [not null]
+  STRT_VALD_DTTM TIMESTAMP(0) [not null]
+  END_VALD_DTTM  TIMESTAMP(0) [not null]
+  EXEC_ID       INTEGER      [not null]
+
+  indexes {
+    (PART_ID, STRT_VALD_DTTM) [pk]
+  }
+}
+
+Table SOC.O_ADDR {
+  PART_ID        INTEGER      [not null]
+  STRT_NUM       VARCHAR(10)  [not null]
+  STRT_DSC       VARCHAR(250) [not null]
+  COMP_STRT      VARCHAR(250) 
+  POST_CD        VARCHAR(10)  [not null]
+  CITY_NAME      VARCHAR(100) 
+  CNTR_NAME      VARCHAR(100) 
+  STRT_VALD_DTTM TIMESTAMP(0) [not null]
+  END_VALD_DTTM  TIMESTAMP(0) [not null]
+  EXEC_ID        INTEGER      [not null]
+
+  indexes {
+    (PART_ID, STRT_VALD_DTTM) [pk]
+  }
+}
+
+
+Table SOC.O_CONS {
+  CONS_ID        INTEGER      [not null]
+  STFF_ID        INTEGER      [not null]
+  PATN_ID        INTEGER      [not null]
+  CONS_STRT_DTTM TIMESTAMP(0) [not null]
+  CONS_END_DTTM  TIMESTAMP(0) [not null]
+  PATN_WEGH      INTEGER      [not null]
+  PATN_TEMP      INTEGER      
+  TEMP_UNIT      VARCHAR(15)  
+  BLD_PRSS       INTEGER      
+  PATH_DSC       VARCHAR(250) 
+  DIBT_IND       BYTEINT      
+  TRET_ID        TIMESTAMP(0) 
+  HOSP_IND       BYTEINT      
+  EXEC_ID        INTEGER      [not null]
+
+  indexes {
+    CONS_ID [pk]
+  }
+}
+
+
+Table SOC.O_HOSP {
+  HOSP_ID        INTEGER      [not null]
+  CONS_ID        INTEGER      [not null]
+  ROOM_NUM       SMALLINT     [not null]
+  HOSP_STRT_DTTM TIMESTAMP(0) [not null]
+  HOSP_END_DTTM  TIMESTAMP(0) [not null]
+  HOSP_FINL_RATE TIMESTAMP(0) [not null]
+  STFF_ID        INTEGER      [not null]
+  EXEC_ID        INTEGER      [not null]
+
+  indexes {
+    HOSP_ID [pk]
+  }
+}
+
+
+Table SOC.R_MEDC {
+  MEDC_ID   INTEGER      [not null]
+  MEDC_CD   VARCHAR(10)  [not null]
+  MEDC_NAME VARCHAR(250) 
+  MEDC_COND VARCHAR(100) 
+  MEDC_CATG VARCHAR(100) [not null]
+  MANF_BRND VARCHAR(100) [not null]
+  EXEC_ID   INTEGER      [not null]
+
+  indexes {
+    MEDC_ID [pk]
+  }
+}
+
+Table TCH.T_SUIV_TRMT {
+  RUN_ID         INTEGER      [not null]
+  EXEC_ID        INTEGER      [not null]
+  SCRPT_NAME     VARCHAR(250) [not null]
+  EXEC_STRT_DTTM TIMESTAMP(0) [not null]
+  EXEC_END_DTTM  TIMESTAMP(0) 
+  EXEC_STTS_CD   VARCHAR(10)  [not null]
+
+  indexes {
+    EXEC_ID [pk]
+  }
+}
+
+Table TCH.T_SUIV_RUN {
+  RUN_ID        INTEGER      [not null]
+  RUN_STRT_DTTM TIMESTAMP(0) [not null]
+  RUN_END_DTTM  TIMESTAMP(0) 
+  RUN_STTS_CD   VARCHAR(10)  [not null]
+
+  indexes {
+    RUN_ID [pk]
+  }
+}
+
+
+// RELATIONS (clés étrangères logiques)
+
+// R_PART 1..1 O_INDV 
+Ref: SOC.R_PART.PART_ID < SOC.O_INDV.PART_ID
+
+// R_PART 1..1 O_STFF 
+Ref: SOC.R_PART.PART_ID < SOC.O_STFF.PART_ID
+
+// R_PART 1..N O_TELP (1 patient peut avoir N téléphones historisés)
+Ref: SOC.R_PART.PART_ID < SOC.O_TELP.PART_ID
+
+// R_PART 1..N O_ADDR (1 patient peut avoir N adresses historisées)
+Ref: SOC.R_PART.PART_ID < SOC.O_ADDR.PART_ID
+
+// R_PART 1..N O_CONS (personnel qui fait la consultation)
+Ref: SOC.R_PART.PART_ID < SOC.O_CONS.STFF_ID
+
+// R_PART 1..N O_CONS (patient consulté)
+Ref: SOC.R_PART.PART_ID < SOC.O_CONS.PATN_ID
+
+// R_PART 1..N O_HOSP (personnel responsable de l'hospitalisation)
+Ref: SOC.R_PART.PART_ID < SOC.O_HOSP.STFF_ID
+
+// R_MEDC 1..N O_TRET (1 médicament peut être dans N traitements)
+Ref: SOC.R_MEDC.MEDC_ID < SOC.O_TRET.MEDC_ID
+
+// O_CONS 1..N O_TRET (1 consultation peut donner lieu à N traitement)
+Ref: SOC.O_CONS.CONS_ID < SOC.O_TRET.CONS_ID
+
+// O_CONS 1..* O_HOSP (1 consultation peut entraîner 1 hospitalisation)
+Ref: SOC.O_CONS.CONS_ID < SOC.O_HOSP.CONS_ID
+
+// R_ROOM 1..N O_HOSP (1 chambre peut accueillir N hospitalisations)
+Ref: SOC.R_ROOM.ROOM_NUM < SOC.O_HOSP.ROOM_NUM
+
+// T_SUIV_RUN 1..N T_SUIV_TRMT (1 run contient N traitements exécutés)
+Ref: TCH.T_SUIV_RUN.RUN_ID < TCH.T_SUIV_TRMT.RUN_ID
