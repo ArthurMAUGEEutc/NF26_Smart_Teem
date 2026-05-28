@@ -1,0 +1,173 @@
+@startuml schema_socle
+
+' ─────────────────────────────────────────
+'  Schéma SOC
+' ─────────────────────────────────────────
+
+package "SOC" {
+
+  entity "R_PART" as RPART {
+    * PART_ID : INTEGER <<PK>>
+    --
+    * SRC_ID  : INTEGER
+    * SRC_TYP : VARCHAR(50)
+  }
+
+  entity "O_INDV" as OINDV {
+    * PART_ID        : INTEGER <<PK, FK>>
+    --
+    * INDV_NAME      : VARCHAR(100)
+    * INDV_FIRS_NAME : VARCHAR(100)
+    * INDV_STTS_CD   : VARCHAR(10)
+    * CRTN_DTTM      : TIMESTAMP(0)
+    * UPDT_DTTM      : TIMESTAMP(0)
+      BIRT_DT        : DATE
+      BIRT_CITY      : VARCHAR(100)
+      BIRT_CNTR      : VARCHAR(100)
+      SOCL_NUM       : VARCHAR(15)
+    * EXEC_ID        : INTEGER
+  }
+
+  entity "O_STFF" as OSTFF {
+    * PART_ID        : INTEGER <<PK, FK>>
+    --
+    * WORK_STRT_DTTM : TIMESTAMP(0)
+      WORK_END_DTTM  : TIMESTAMP(0)
+      WORK_END_RESN  : VARCHAR(100)
+    * EXEC_ID        : INTEGER
+  }
+
+  entity "O_TELP" as OTELP {
+    * PART_ID        : INTEGER <<PK, FK>>
+    * STRT_VALD_DTTM : TIMESTAMP(0) <<PK>>
+    --
+      CNTR_IND       : VARCHAR(5)
+    * TELP_NUM       : VARCHAR(20)
+    * END_VALD_DTTM  : TIMESTAMP(0)
+    * EXEC_ID        : INTEGER
+  }
+
+  entity "O_ADDR" as OADDR {
+    * PART_ID        : INTEGER <<PK, FK>>
+    * STRT_VALD_DTTM : TIMESTAMP(0) <<PK>>
+    --
+    * STRT_NUM       : VARCHAR(10)
+    * STRT_DSC       : VARCHAR(250)
+      COMP_STRT      : VARCHAR(250)
+    * POST_CD        : VARCHAR(10)
+      CITY_NAME      : VARCHAR(100)
+      CNTR_NAME      : VARCHAR(100)
+    * END_VALD_DTTM  : TIMESTAMP(0)
+    * EXEC_ID        : INTEGER
+  }
+
+  entity "O_CONS" as OCONS {
+    * CONS_ID        : INTEGER <<PK>>
+    --
+    * STFF_ID        : INTEGER <<FK>>
+    * PATN_ID        : INTEGER <<FK>>
+    * CONS_STRT_DTTM : TIMESTAMP(0)
+    * CONS_END_DTTM  : TIMESTAMP(0)
+    * PATN_WEGH      : INTEGER
+      PATN_TEMP      : INTEGER
+      TEMP_UNIT      : VARCHAR(15)
+      BLD_PRSS       : INTEGER
+      PATH_DSC       : VARCHAR(250)
+      DIBT_IND       : BYTEINT
+      TRET_ID        : TIMESTAMP(0)
+      HOSP_IND       : BYTEINT
+    * EXEC_ID        : INTEGER
+  }
+
+  entity "O_TRET" as OTRET {
+    * TRET_ID        : INTEGER <<PK>>
+    --
+      MEDC_ID        : INTEGER <<FK>>
+      MEDC_QTY       : SMALLINT
+    * DOSG_DSC       : VARCHAR(100)
+    * CONS_ID        : INTEGER <<FK>>
+    * TRET_CRTN_DTTM : TIMESTAMP(0)
+    * EXEC_ID        : INTEGER
+  }
+
+  entity "O_HOSP" as OHOSP {
+    * HOSP_ID        : INTEGER <<PK>>
+    --
+    * CONS_ID        : INTEGER <<FK>>
+    * ROOM_NUM       : SMALLINT <<FK>>
+    * HOSP_STRT_DTTM : TIMESTAMP(0)
+    * HOSP_END_DTTM  : TIMESTAMP(0)
+    * HOSP_FINL_RATE : TIMESTAMP(0)
+    * STFF_ID        : INTEGER <<FK>>
+    * EXEC_ID        : INTEGER
+  }
+
+  entity "R_ROOM" as RROOM {
+    * ROOM_NUM      : INTEGER <<PK>>
+    --
+    * ROOM_NAME     : VARCHAR(20)
+      FLOR_NUM      : BYTEINT
+      BULD_NAME     : VARCHAR(20)
+      ROOM_TYP      : VARCHAR(10)
+    * ROOM_DAY_RATE : SMALLINT
+    * CRTN_DT       : DATE
+    * EXEC_ID       : INTEGER
+  }
+
+  entity "R_MEDC" as RMEDC {
+    * MEDC_ID   : INTEGER <<PK>>
+    --
+    * MEDC_CD   : VARCHAR(10)
+      MEDC_NAME : VARCHAR(250)
+      MEDC_COND : VARCHAR(100)
+    * MEDC_CATG : VARCHAR(100)
+    * MANF_BRND : VARCHAR(100)
+    * EXEC_ID   : INTEGER
+  }
+
+}
+
+' ─────────────────────────────────────────
+'  Schéma TCH
+' ─────────────────────────────────────────
+
+package "TCH" {
+
+  entity "T_SUIV_RUN" as TRUN {
+    * RUN_ID        : INTEGER <<PK>>
+    --
+    * RUN_STRT_DTTM : TIMESTAMP(0)
+      RUN_END_DTTM  : TIMESTAMP(0)
+    * RUN_STTS_CD   : VARCHAR(10)
+  }
+
+  entity "T_SUIV_TRMT" as TTRMT {
+    * EXEC_ID        : INTEGER <<PK>>
+    --
+    * RUN_ID         : INTEGER <<FK>>
+    * SCRPT_NAME     : VARCHAR(250)
+    * EXEC_STRT_DTTM : TIMESTAMP(0)
+      EXEC_END_DTTM  : TIMESTAMP(0)
+    * EXEC_STTS_CD   : VARCHAR(10)
+  }
+
+}
+
+' ─────────────────────────────────────────
+'  Relations
+' ─────────────────────────────────────────
+
+RPART ||--|| OINDV  : "est une personne"
+RPART ||--|| OSTFF  : "est un staff"
+RPART ||--o{ OTELP  : "a des téléphones"
+RPART ||--o{ OADDR  : "a des adresses"
+RPART ||--o{ OCONS  : "réalise (staff)"
+RPART ||--o{ OCONS  : "est consulté (patient)"
+RPART ||--o{ OHOSP  : "supervise"
+RMEDC ||--o{ OTRET  : "prescrit dans"
+OCONS ||--o{ OTRET  : "génère"
+OCONS ||--o{ OHOSP  : "entraîne"
+RROOM ||--o{ OHOSP  : "accueille"
+TRUN  ||--o{ TTRMT  : "contient"
+
+@enduml
