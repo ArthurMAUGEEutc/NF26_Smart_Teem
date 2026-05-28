@@ -1,5 +1,6 @@
 Environnement technique :
-- Suivi de projet : GitHub Project
+
+- Suivi de projet : Notion
 - Snowflake data platform : AI Data Cloud / Enterprise / Amazon Web Services
 - Editeur de texte : Visual Studio Code 
 - Versionning : GitHub
