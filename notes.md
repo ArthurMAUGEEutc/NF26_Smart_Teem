@@ -1,6 +1,4 @@
 
-Est-ce qu'il y a besoin de faire un mpd staging ? = > NON  
-
 Problèmes : 
 
 - O_CONS.TRET_ID est typé TIMESTAMP(0) dans le mapping alors que c'est un INTEGER ?
