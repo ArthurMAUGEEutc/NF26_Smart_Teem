@@ -47,4 +47,6 @@ logs
 # Fichiers temporaires Microsoft Office
 ~$*
 ~$*.xls
-~$*.xlsx
+~$*.xlsxCLAUDE.md
+.DS_Store
+CLAUDE.md
