@@ -1,6 +1,5 @@
--- ============================================================
---  Création des bases de données
--- ============================================================
+-- Création des bases de données du projet NF26
+USE ROLE ACCOUNTADMIN;
 
 CREATE DATABASE IF NOT EXISTS STG;
 CREATE DATABASE IF NOT EXISTS SOC;

@@ -1,115 +1,104 @@
 -- ============================================================
---  MPD Staging -- Script CREATE TABLE
---  Database : STG
+-- Création des tables de la base STG (Staging)
+-- Les tables STG sont recréées à chaque installation (idempotent)
 -- ============================================================
 
+USE ROLE ACCOUNTADMIN;
 USE DATABASE STG;
 
--- ------------------------------------------------------------
---  STG.CHAMBRE
--- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS STG.PUBLIC.CHAMBRE (
-    NO_CHAMBRE    INTEGER,
-    NOM_CHAMBRE   VARCHAR(20),
-    NO_ETAGE      BYTEINT      NOT NULL,
-    NOM_BATIMENT  VARCHAR(20)  NOT NULL,
-    TYPE_CHAMBRE  VARCHAR(10)  NOT NULL,
-    PRIX_JOUR     SMALLINT,
-    DT_CREATION   DATE
+CREATE SCHEMA IF NOT EXISTS STG.PUBLIC;
+
+-- Table CHAMBRE
+CREATE OR REPLACE TABLE STG.PUBLIC.CHAMBRE (
+    NO_CHAMBRE      INTEGER       NOT NULL,
+    NOM_CHAMBRE     VARCHAR(20)   NOT NULL,
+    NO_ETAGE        BYTEINT       NOT NULL,
+    NOM_BATIMENT    VARCHAR(20)   NOT NULL,
+    TYPE_CHAMBRE    VARCHAR(10),
+    PRIX_JOUR       SMALLINT      NOT NULL,
+    DT_CREATION     DATE          NOT NULL
 );
 
--- ------------------------------------------------------------
---  STG.TRAITEMENT
--- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS STG.PUBLIC.TRAITEMENT (
-    ID_TRAITEMENT          INTEGER,
-    CD_MEDICAMENT          INTEGER,
-    CATG_MEDICAMENT        VARCHAR(100),
-    MARQUE_FABRI           VARCHAR(100),
-    QTE_MEDICAMENT         SMALLINT     NOT NULL,
-    DSC_POSOLOGIE          VARCHAR(100),
-    ID_CONSULT             INTEGER,
-    TS_CREATION_TRAITEMENT TIMESTAMP(0)
+-- Table TRAITEMENT
+CREATE OR REPLACE TABLE STG.PUBLIC.TRAITEMENT (
+    ID_TRAITEMENT              INTEGER       NOT NULL,
+    CD_MEDICAMENT              INTEGER       NOT NULL,
+    CATG_MEDICAMENT            VARCHAR(100)  NOT NULL,
+    MARQUE_FABRI               VARCHAR(100)  NOT NULL,
+    QTE_MEDICAMENT             SMALLINT,
+    DSC_POSOLOGIE              VARCHAR(100)  NOT NULL,
+    ID_CONSULT                 INTEGER       NOT NULL,
+    TS_CREATION_TRAITEMENT     TIMESTAMP(0)  NOT NULL
 );
 
--- ------------------------------------------------------------
---  STG.PERSONNEL
--- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS STG.PUBLIC.PERSONNEL (
-    ID_PERSONNEL          INTEGER,
-    NOM_PERSONNEL         VARCHAR(100),
-    PRENOM_PERSONNEL      VARCHAR(100),
-    FONCTION_PERSONNEL    VARCHAR(50),
-    TS_DEBUT_ACTIVITE     TIMESTAMP(0),
-    TS_FIN_ACTIVITE       TIMESTAMP(0)  NOT NULL,
-    RAISON_FIN_ACTIVITE   VARCHAR(100)  NOT NULL,
-    TS_CREATION_PERSONNEL TIMESTAMP(0),
-    TS_MAJ_PERSONNEL      TIMESTAMP(0),
-    CD_STATUT_PERSONNEL   VARCHAR(10)
+-- Table PERSONNEL
+CREATE OR REPLACE TABLE STG.PUBLIC.PERSONNEL (
+    ID_PERSONNEL               INTEGER       NOT NULL,
+    NOM_PERSONNEL              VARCHAR(100)  NOT NULL,
+    PRENOM_PERSONNEL           VARCHAR(100)  NOT NULL,
+    FONCTION_PERSONNEL         VARCHAR(50)   NOT NULL,
+    TS_DEBUT_ACTIVITE          TIMESTAMP(0)  NOT NULL,
+    TS_FIN_ACTIVITE            TIMESTAMP(0),
+    RAISON_FIN_ACTIVITE        VARCHAR(100),
+    TS_CREATION_PERSONNEL      TIMESTAMP(0)  NOT NULL,
+    TS_MAJ_PERSONNEL           TIMESTAMP(0)  NOT NULL,
+    CD_STATUT_PERSONNEL        VARCHAR(10)   NOT NULL
 );
 
--- ------------------------------------------------------------
---  STG.PATIENT
--- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS STG.PUBLIC.PATIENT (
-    ID_PATIENT          INTEGER,
-    NOM_PATIENT         VARCHAR(100),
-    PRENOM_PATIENT      VARCHAR(100),
-    DT_NAISS            DATE          NOT NULL,
-    VILLE_NAISS         VARCHAR(100)  NOT NULL,
-    PAYS_NAISS          VARCHAR(100)  NOT NULL,
-    NUM_SECU            VARCHAR(15)   NOT NULL,
-    IND_PAYS_NUM_TELP   VARCHAR(5)    NOT NULL,
-    NUM_TELEPHONE       VARCHAR(20)   NOT NULL,
-    NUM_VOIE            VARCHAR(10)   NOT NULL,
-    DSC_VOIE            VARCHAR(250)  NOT NULL,
-    CMPL_VOIE           VARCHAR(250)  NOT NULL,
-    CD_POSTAL           VARCHAR(10)   NOT NULL,
-    VILLE               VARCHAR(100)  NOT NULL,
-    PAYS                VARCHAR(100)  NOT NULL,
-    TS_CREATION_PATIENT TIMESTAMP(0),
-    TS_MAJ_PATIENT      TIMESTAMP(0)
+-- Table PATIENT
+CREATE OR REPLACE TABLE STG.PUBLIC.PATIENT (
+    ID_PATIENT                 INTEGER       NOT NULL,
+    NOM_PATIENT                VARCHAR(100)  NOT NULL,
+    PRENOM_PATIENT             VARCHAR(100)  NOT NULL,
+    DT_NAISS                   DATE,
+    VILLE_NAISS                VARCHAR(100),
+    PAYS_NAISS                 VARCHAR(100),
+    NUM_SECU                   VARCHAR(15),
+    IND_PAYS_NUM_TELP          VARCHAR(5),
+    NUM_TELEPHONE              VARCHAR(20),
+    NUM_VOIE                   VARCHAR(10),
+    DSC_VOIE                   VARCHAR(250),
+    CMPL_VOIE                  VARCHAR(250),
+    CD_POSTAL                  VARCHAR(10),
+    VILLE                      VARCHAR(100),
+    PAYS                       VARCHAR(100),
+    TS_CREATION_PATIENT        TIMESTAMP(0)  NOT NULL,
+    TS_MAJ_PATIENT             TIMESTAMP(0)  NOT NULL
 );
 
--- ------------------------------------------------------------
---  STG.CONSULTATION
--- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS STG.PUBLIC.CONSULTATION (
-    ID_CONSULT       INTEGER,
-    ID_PERSONNEL     INTEGER,
-    ID_PATIENT       INTEGER,
-    TS_DEBUT_CONSULT TIMESTAMP(0),
-    TS_FIN_CONSULT   TIMESTAMP(0),
-    POIDS_PATIENT    INTEGER,
-    TEMP_PATIENT     INTEGER      NOT NULL,
-    UNIT_TEMP        VARCHAR(15)  NOT NULL,
-    TENSION_PATIENT  INTEGER      NOT NULL,
-    DSC_PATHO        VARCHAR(250) NOT NULL,
-    INDIC_DIABETE    VARCHAR(10)  NOT NULL,
-    ID_TRAITEMENT    INTEGER      NOT NULL,
-    INDIC_HOSPI      VARCHAR(10)  NOT NULL
+-- Table CONSULTATION
+CREATE OR REPLACE TABLE STG.PUBLIC.CONSULTATION (
+    ID_CONSULT                 INTEGER       NOT NULL,
+    ID_PERSONNEL               INTEGER       NOT NULL,
+    ID_PATIENT                 INTEGER       NOT NULL,
+    TS_DEBUT_CONSULT           TIMESTAMP(0)  NOT NULL,
+    TS_FIN_CONSULT             TIMESTAMP(0)  NOT NULL,
+    POIDS_PATIENT              INTEGER       NOT NULL,
+    TEMP_PATIENT               INTEGER,
+    UNIT_TEMP                  VARCHAR(15),
+    TENSION_PATIENT            INTEGER,
+    DSC_PATHO                  VARCHAR(250),
+    INDIC_DIABETE              VARCHAR(10),
+    ID_TRAITEMENT              INTEGER,
+    INDIC_HOSPI                VARCHAR(10)
 );
 
--- ------------------------------------------------------------
---  STG.HOSPITALISATION
--- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS STG.PUBLIC.HOSPITALISATION (
-    ID_HOSPI          INTEGER,
-    ID_CONSULT        INTEGER,
-    NO_CHAMBRE        SMALLINT,
-    TS_DEBUT_HOSPI    TIMESTAMP(0),
-    TS_FIN_HOSPI      TIMESTAMP(0) NOT NULL,
-    COUT_HOSPI        TIMESTAMP(0) NOT NULL,
-    ID_PERSONNEL_RESP INTEGER
+-- Table HOSPITALISATION
+CREATE OR REPLACE TABLE STG.PUBLIC.HOSPITALISATION (
+    ID_HOSPI                   INTEGER       NOT NULL,
+    ID_CONSULT                 INTEGER       NOT NULL,
+    NO_CHAMBRE                 SMALLINT      NOT NULL,
+    TS_DEBUT_HOSPI             TIMESTAMP(0)  NOT NULL,
+    TS_FIN_HOSPI               TIMESTAMP(0)  NOT NULL,
+    COUT_HOSPI                 INTEGER       NOT NULL,
+    ID_PERSONNEL_RESP          INTEGER       NOT NULL
 );
 
--- ------------------------------------------------------------
---  STG.MEDICAMENT
--- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS STG.PUBLIC.MEDICAMENT (
-    CD_MEDICAMENT     VARCHAR(10),
-    NOM_MEDICAMENT    VARCHAR(250) NOT NULL,
-    CONDIT_MEDICAMENT VARCHAR(100) NOT NULL,
-    CATG_MEDICAMENT   VARCHAR(100),
-    MARQUE_FABRI      VARCHAR(100)
+-- Table MEDICAMENT
+CREATE OR REPLACE TABLE STG.PUBLIC.MEDICAMENT (
+    CD_MEDICAMENT              VARCHAR(10)   NOT NULL,
+    NOM_MEDICAMENT             VARCHAR(250)  NOT NULL,
+    CONDIT_MEDICAMENT          VARCHAR(100)  NOT NULL,
+    CATG_MEDICAMENT            VARCHAR(100)  NOT NULL,
+    MARQUE_FABRI               VARCHAR(100)  NOT NULL
 );
