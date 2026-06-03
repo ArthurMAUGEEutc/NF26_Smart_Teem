@@ -1,0 +1,13 @@
+hopital_dw:
+  target: dev
+  outputs:
+    dev:
+      type: snowflake
+      account: "ton_account"
+      user: "ton_user"
+      password: "ton_password"
+      role: ACCOUNTADMIN
+      warehouse: COMPUTE_WH
+      database: SOC
+      schema: PUBLIC
+      threads: 4
