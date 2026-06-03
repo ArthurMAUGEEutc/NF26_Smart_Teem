@@ -1,27 +1,19 @@
-"""
-install_sid.py — Script d'installation du SID (Système d'Information Décisionnel)
-- Idempotent : peut être exécuté plusieurs fois sans erreur
-- Trace toutes les opérations dans installation.log
-- Les bases de données ne sont pas recréées si elles existent déjà
-- Les tables STG sont recréées (CREATE OR REPLACE)
-- Les tables SOC et TCH ne sont pas recréées si elles existent déjà
-"""
-
 import logging
 import os
 import re
 import sys
 from datetime import datetime
+from io import StringIO
 from pathlib import Path
 
 import snowflake.connector
 
 # ──────────────────────────────────────────────
-# Configuration du logging
+# Configuration du logging (en mémoire, écriture dans un fichier à la toute fin
 # ──────────────────────────────────────────────
-LOG_FILE = Path("installation.log")
-
-handler = logging.FileHandler(LOG_FILE, encoding="utf-8", mode="a")
+# Accumuler les logs dans un flux mémoire
+log_buffer = StringIO()
+handler = logging.StreamHandler(log_buffer)
 handler.setLevel(logging.INFO)
 
 formatter = logging.Formatter(
@@ -30,11 +22,18 @@ formatter = logging.Formatter(
 handler.setFormatter(formatter)
 
 logger = logging.getLogger()
+
+# Nettoyage des handlers du Notebook
+if logger.hasHandlers():
+    logger.handlers.clear()
+
 logger.setLevel(logging.INFO)
 logger.addHandler(handler)
 
-print("LOG PATH =", LOG_FILE)
-logger.info("TEST LOG")
+# Optionnel : logging console
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
 
 # ──────────────────────────────────────────────
 # Ordre d'exécution des scripts SQL
@@ -71,17 +70,13 @@ def get_snowflake_connection():
 
 def parse_statements(sql_text: str) -> list[str]:
     """Découpe le fichier SQL en statements individuels (ignore les commentaires)."""
-    # Supprimer les commentaires de ligne
     sql_text = re.sub(r"--[^\n]*", "", sql_text)
     statements = [s.strip() for s in sql_text.split(";") if s.strip()]
     return statements
 
 
 def execute_script(cursor, script_path: Path) -> bool:
-    """
-    Exécute tous les statements d'un fichier SQL.
-    Retourne True si tout s'est bien passé, False sinon.
-    """
+    """Exécute tous les statements d'un fichier SQL."""
     logger.info(f"──── Début exécution : {script_path.name} ────")
 
     try:
@@ -142,7 +137,19 @@ def main():
     logger.info(f"Durée totale : {duration}")
     logger.info("=" * 60)
 
+    # ──────────────────────────────────────────────
+    # ÉCRITURE FINALE DU FICHIER (contourner le bug snowflake)
+    # ──────────────────────────────────────────────
     logging.shutdown()
+    
+    # On récupère tout ce qui a été loggé en mémoire
+    final_logs = log_buffer.getvalue()
+    
+    # On l'écrit d'un seul coup 
+    log_file_path = base_dir / "installation.log"
+    log_file_path.write_text(final_logs, encoding="utf-8")
+    
+    print(f"\n[OK] Fichier de log créé avec succès dans le workspace : {log_file_path}")
     # Toujours terminer sans erreur (code 0)
     sys.exit(0)
 
