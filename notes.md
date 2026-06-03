@@ -6,3 +6,4 @@ Pour le lot 2 :
 
 Est-ce qu'il faut que les fichiers load_data et install_sid on les run depuis un terminal et qu'ils se connectent à snowflake,
 ou est-ce qu'on peut les lancer directement dans un workspace snowflake. 
+supprimer public_public
