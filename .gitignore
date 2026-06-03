@@ -44,6 +44,9 @@ yarn-error.log
 *.log
 logs
 
+# Historisation snapshots STG
+HISTORY/
+
 # Fichiers temporaires Microsoft Office
 ~$*
 ~$*.xls
