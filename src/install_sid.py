@@ -1,7 +1,8 @@
 """
 install_sid.py — Script d'installation du SID (Système d'Information Décisionnel)
+- À exécuter depuis le Workspace Snowflake (fichier dans src/, SQL/ à la racine)
 - Idempotent : peut être exécuté plusieurs fois sans erreur
-- Trace toutes les opérations dans installation.log
+- Trace toutes les opérations dans logs/installation.log
 - Les bases de données ne sont pas recréées si elles existent déjà
 - Les tables STG sont recréées (CREATE OR REPLACE)
 - Les tables SOC et TCH ne sont pas recréées si elles existent déjà
@@ -16,25 +17,59 @@ from pathlib import Path
 
 import snowflake.connector
 
-# ──────────────────────────────────────────────
-# Configuration du logging
-# ──────────────────────────────────────────────
-LOG_FILE = Path("installation.log")
 
-handler = logging.FileHandler(LOG_FILE, encoding="utf-8", mode="a")
-handler.setLevel(logging.INFO)
+def resolve_project_paths() -> tuple[Path, Path]:
+    """
+    Racine projet et SQL_DIR depuis le Workspace Snowflake.
+    Exécution attendue depuis src/ : remonte jusqu'à trouver SQL/create_db.sql.
+    """
+    cwd = Path.cwd().resolve()
+    for base in [cwd, *cwd.parents]:
+        sql_dir = base / "SQL"
+        if (sql_dir / "create_db.sql").is_file():
+            return base, sql_dir
 
-formatter = logging.Formatter(
-    "%(asctime)s [%(levelname)s] %(message)s"
-)
-handler.setFormatter(formatter)
+    raise FileNotFoundError(
+        "Impossible de localiser SQL/create_db.sql. "
+        "Le workspace doit contenir src/ et SQL/ à la même racine."
+    )
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-logger.addHandler(handler)
 
-print("LOG PATH =", LOG_FILE)
-logger.info("TEST LOG")
+PROJECT_ROOT, SQL_DIR = resolve_project_paths()
+LOG_DIR = PROJECT_ROOT / "logs"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+LOG_FILE = LOG_DIR / "installation.log"
+
+_LOG_FORMAT = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+
+
+class WorkspaceFileHandler(logging.FileHandler):
+    """FileHandler pour le FS du Workspace Snowflake (flush souvent non supporté)."""
+
+    def flush(self) -> None:
+        try:
+            super().flush()
+        except OSError:
+            pass
+
+
+def setup_logger() -> logging.Logger:
+    log = logging.getLogger("install_sid")
+    log.setLevel(logging.INFO)
+    log.handlers.clear()
+
+    file_handler = WorkspaceFileHandler(LOG_FILE, encoding="utf-8", mode="a")
+    file_handler.setFormatter(_LOG_FORMAT)
+    log.addHandler(file_handler)
+
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setFormatter(_LOG_FORMAT)
+    log.addHandler(stream_handler)
+
+    return log
+
+
+logger = setup_logger()
 
 # ──────────────────────────────────────────────
 # Ordre d'exécution des scripts SQL
@@ -114,7 +149,6 @@ def main():
     logger.info(f"Date : {start.strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info("=" * 60)
 
-    base_dir = Path.cwd()
     overall_success = True
 
     try:
@@ -122,7 +156,7 @@ def main():
         cursor = conn.cursor()
 
         for script_name in SQL_SCRIPTS:
-            script_path = base_dir / script_name
+            script_path = SQL_DIR / script_name
             ok = execute_script(cursor, script_path)
             if not ok:
                 overall_success = False
@@ -143,9 +177,6 @@ def main():
     logger.info("=" * 60)
 
     logging.shutdown()
-    # Toujours terminer sans erreur (code 0)
-    sys.exit(0)
 
 
-if __name__ == "__main__":
-    main()
+main()
