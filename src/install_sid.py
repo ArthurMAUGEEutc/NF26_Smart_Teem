@@ -19,22 +19,18 @@ import snowflake.connector
 # ──────────────────────────────────────────────
 # Configuration du logging
 # ──────────────────────────────────────────────
-LOG_FILE = Path("installation.log")
+LOG_FILE = Path(__file__).parent / "installation.log"
 
-handler = logging.FileHandler(LOG_FILE, encoding="utf-8", mode="a")
-handler.setLevel(logging.INFO)
-
-formatter = logging.Formatter(
-    "%(asctime)s [%(levelname)s] %(message)s"
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[
+        logging.FileHandler(LOG_FILE, encoding="utf-8"),
+        logging.StreamHandler(sys.stdout),
+    ],
 )
-handler.setFormatter(formatter)
-
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-logger.addHandler(handler)
-
-print("LOG PATH =", LOG_FILE)
-logger.info("TEST LOG")
+logger = logging.getLogger(__name__)
 
 # ──────────────────────────────────────────────
 # Ordre d'exécution des scripts SQL
@@ -114,7 +110,7 @@ def main():
     logger.info(f"Date : {start.strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info("=" * 60)
 
-    base_dir = Path.cwd()
+    base_dir = Path(__file__).parent
     overall_success = True
 
     try:
@@ -142,7 +138,6 @@ def main():
     logger.info(f"Durée totale : {duration}")
     logger.info("=" * 60)
 
-    logging.shutdown()
     # Toujours terminer sans erreur (code 0)
     sys.exit(0)
 
