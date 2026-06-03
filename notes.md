@@ -13,3 +13,7 @@ Pour le lot 3 :
 - dag airflow d’ordonnancement de l’installation / dag airflow d’ordonnancement de l’ingestion et alimentation du datawarehouse
 - faire les models restants en s'assurant d'ajouter les macros
 - Les exécutions doivent être tracées dans un fichier .log => je pense que ça se gère dans airflow
+
+Tâches à se répartir : 
+- Models des 7 tables (wrk + soc) = 14 modèles à faire
+- Airflows : 2 DAGs (je pense bien 2 personnes pour comprendre airflow + faire)
