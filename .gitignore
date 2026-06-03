@@ -47,6 +47,9 @@ logs
 # Fichiers temporaires Microsoft Office
 ~$*
 ~$*.xls
-~$*.xlsxCLAUDE.md
-.DS_Store
-CLAUDE.md
+~$*.xlsx
+
+# dbt
+dbt/profiles.yml
+dbt/target/
+dbt/logs/

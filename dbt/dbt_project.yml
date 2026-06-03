@@ -1,0 +1,30 @@
+name: 'nf26_hospital'
+version: '1.0.0'
+config-version: 2
+
+profile: 'nf26_hospital'
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+log-path:    "logs"
+target-path: "target"
+
+models:
+  nf26_hospital:
+    +pre-hook:
+      - "{{ suivi_set_exec_id() }}"
+      - "{{ suivi_insert_run() }}"
+      - "{{ suivi_insert_trmt() }}"
+    +post-hook:
+      - "{{ suivi_fin_trmt('OK') }}"
+      - "{{ suivi_fin_run('OK') }}"
+
+    wrk:
+      +database:     WRK
+      +schema:       PUBLIC
+      +materialized: table
+
+    soc:
+      +database:     SOC
+      +schema:       PUBLIC
+      +materialized: table

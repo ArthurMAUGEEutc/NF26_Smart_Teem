@@ -1,0 +1,17 @@
+# Copier ce fichier en profiles.yml et le remplir (ne jamais committer profiles.yml)
+# Placer profiles.yml dans ~/.dbt/ ou utiliser : dbt run --profiles-dir .
+
+nf26_hospital:
+  target: dev
+  outputs:
+    dev:
+      type: snowflake
+      account:       "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      host:          "{{ env_var('SNOWFLAKE_HOST', '') }}"
+      authenticator: oauth
+      token:         "{{ env_var('SNOWFLAKE_OAUTH_TOKEN') }}"
+      role:          ACCOUNTADMIN
+      warehouse:     COMPUTE_WH
+      database:      SOC
+      schema:        PUBLIC
+      threads:       4
