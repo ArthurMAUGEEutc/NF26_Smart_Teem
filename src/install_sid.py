@@ -8,9 +8,7 @@ from pathlib import Path
 
 import snowflake.connector
 
-# ──────────────────────────────────────────────
-# Configuration du logging (en mémoire, écriture dans un fichier à la toute fin
-# ──────────────────────────────────────────────
+# Configuration du logging (en mémoire, écriture dans un fichier à la toute fin)
 # Accumuler les logs dans un flux mémoire
 log_buffer = StringIO()
 handler = logging.StreamHandler(log_buffer)
@@ -35,9 +33,7 @@ console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
-# ──────────────────────────────────────────────
 # Ordre d'exécution des scripts SQL
-# ──────────────────────────────────────────────
 SQL_SCRIPTS = [
     "create_db.sql",   # Création des bases (IF NOT EXISTS)
     "create_stg.sql",  # Tables STG (CREATE OR REPLACE)
@@ -47,7 +43,7 @@ SQL_SCRIPTS = [
 
 
 def get_snowflake_connection():
-    """Connexion Snowflake via le token OAuth du workspace Snowsight."""
+    # Connexion Snowflake via le token OAuth du workspace Snowsight
     token_path = os.getenv("SNOWFLAKE_TOKEN_FILE_PATH", "/snowflake/session/token")
     try:
         with open(token_path) as f:
@@ -69,14 +65,14 @@ def get_snowflake_connection():
 
 
 def parse_statements(sql_text: str) -> list[str]:
-    """Découpe le fichier SQL en statements individuels (ignore les commentaires)."""
+    # Découpe le fichier SQL en statements individuels (ignore les commentaires)
     sql_text = re.sub(r"--[^\n]*", "", sql_text)
     statements = [s.strip() for s in sql_text.split(";") if s.strip()]
     return statements
 
 
 def execute_script(cursor, script_path: Path) -> bool:
-    """Exécute tous les statements d'un fichier SQL."""
+    # Exécute tous les statements d'un fichier SQL
     logger.info(f"──── Début exécution : {script_path.name} ────")
 
     try:
@@ -137,9 +133,7 @@ def main():
     logger.info(f"Durée totale : {duration}")
     logger.info("=" * 60)
 
-    # ──────────────────────────────────────────────
-    # ÉCRITURE FINALE DU FICHIER (contourner le bug snowflake)
-    # ──────────────────────────────────────────────
+    # Ecriture du fichier de log à la fin (contourner bug écriture locale workspace snowflake)
     logging.shutdown()
     
     # On récupère tout ce qui a été loggé en mémoire
@@ -150,6 +144,8 @@ def main():
     log_file_path.write_text(final_logs, encoding="utf-8")
     
     print(f"\n[OK] Fichier de log créé avec succès dans le workspace : {log_file_path}")
+
+    
     # Toujours terminer sans erreur (code 0)
     sys.exit(0)
 

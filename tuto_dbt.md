@@ -1,9 +1,8 @@
 # Hopital DW — Setup dbt
 
 ## Prérequis
-- Python installé sur ton PC
 - Accès au compte Snowflake du projet
-- Avoir cloné le repo GitLab
+- Avoir cloné le repo 
 
 ---
 
@@ -22,14 +21,20 @@ dbt --version
 
 ## 2. Créer ton profil de connexion
 
-Copie le fichier exemple fourni dans le repo :
-(~ = C:\Users\ton_nom\ sur windows et /Users/ton_nom/ sur mac)
+Le fichier `profiles.yml` contient tes credentials Snowflake. Il doit être placé dans ton dossier personnel, dans un sous-dossier `.dbt` :
+ 
+| Système | Emplacement |
+|---|---|
+| Windows | `C:\Users\ton_nom\.dbt\profiles.yml` |
+| Mac | `/Users/ton_nom/.dbt/profiles.yml` |
+| Linux | `/home/ton_nom/.dbt/profiles.yml` |
 
-```bash
-cp profiles.yml.example ~/.dbt/profiles.yml
-```
-
-Ouvre `~/.dbt/profiles.yml` et remplace les valeurs : 
+**Étapes :**
+ 
+1. Crée le dossier `.dbt` dans ton dossier personnel s'il n'existe pas
+2. Copie le fichier `profiles.yml.example` du repo dans ce dossier
+3. Renomme-le `profiles.yml`
+4. Ouvre-le et remplace les valeurs :
 
 ```yaml
 dbt_hopital:

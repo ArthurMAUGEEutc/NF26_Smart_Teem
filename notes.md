@@ -3,3 +3,6 @@ Pour le lot 2 :
 - Développement des scripts de création des tables (un script par base de données) => utiliser le MPD stg et socle
 - Développement du scripts ‘install_sid.py’ d’exécution de l’installation du SID => script qui appelle les scripts sql créés précédemment pour tout créer
 - Développement des macros : comment on passe les paramètres ? comment on lance les macros ? 
+
+Est-ce qu'il faut que les fichiers load_data et install_sid on les run depuis un terminal et qu'ils se connectent à snowflake,
+ou est-ce qu'on peut les lancer directement dans un workspace snowflake. 
