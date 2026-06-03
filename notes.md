@@ -5,5 +5,11 @@ Pour le lot 2 :
 - Développement des macros : comment on passe les paramètres ? comment on lance les macros ? 
 
 Est-ce qu'il faut que les fichiers load_data et install_sid on les run depuis un terminal et qu'ils se connectent à snowflake,
-ou est-ce qu'on peut les lancer directement dans un workspace snowflake. 
+ou est-ce qu'on peut les lancer directement dans un workspace snowflake ? 
+
 supprimer public_public
+
+Pour le lot 3 : 
+- dag airflow d’ordonnancement de l’installation / dag airflow d’ordonnancement de l’ingestion et alimentation du datawarehouse
+- faire les models restants en s'assurant d'ajouter les macros
+- Les exécutions doivent être tracées dans un fichier .log => je pense que ça se gère dans airflow
