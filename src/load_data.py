@@ -1,4 +1,3 @@
-import logging
 import os
 import glob
 from datetime import datetime
@@ -41,6 +40,7 @@ def create_stage_and_format(session):
             DATE_FORMAT         = 'YYYY-MM-DD'
             TIMESTAMP_FORMAT    = 'YYYY-MM-DD HH24:MI:SS'
     """).collect()
+    print("Stage et file format prêts.")
 
 
 def find_file(prefix: str) -> str | None:
@@ -49,14 +49,15 @@ def find_file(prefix: str) -> str | None:
         return None
     return sorted(matches)[-1]
 
+
 def upload_and_load(session, prefix: str, table: str) -> bool:
     filepath = find_file(prefix)
     if not filepath:
-        print(f"[{prefix}] Fichier introuvable")
+        print(f"[{prefix}] ERREUR — Aucun fichier trouvé")
         return False
 
     filename = os.path.basename(filepath)
-    print(f"[{prefix}] Fichier trouvé : {filename}")
+    print(f"[{prefix}] Fichier : {filename}")
 
     try:
         result = session.file.put(
@@ -65,12 +66,11 @@ def upload_and_load(session, prefix: str, table: str) -> bool:
             auto_compress=False,
             overwrite=True,
         )
-        print(f"[{prefix}] PUT → {result[0].status}")
+        print(f"[{prefix}] Upload → {result[0].status}")
     except Exception as e:
-        print(f"[{prefix}] Échec PUT : {e}")
+        print(f"[{prefix}] ERREUR upload : {e}")
         return False
 
-    # COPY INTO spécifique pour PERSONNEL (dates sans heure → TIMESTAMP)
     if prefix == "PERSONNEL":
         copy_sql = f"""
             COPY INTO {table} (
@@ -110,14 +110,23 @@ def upload_and_load(session, prefix: str, table: str) -> bool:
         rows = session.sql(copy_sql).collect()
         for row in rows:
             row_dict = row.as_dict()
-            print(f"[{prefix}] {row_dict}")
+            status  = row_dict.get("status", "N/A")
+            loaded  = row_dict.get("rows_loaded", "?")
+            errors  = row_dict.get("errors_seen", "?")
+            print(f"[{prefix}] {status} — {loaded} lignes chargées, {errors} erreur(s)")
         return True
     except Exception as e:
-        print(f"[{prefix}] Échec COPY INTO : {type(e).__name__} : {e}")
+        print(f"[{prefix}] ERREUR COPY INTO : {type(e).__name__} : {e}")
         return False
-        
+
+
 def main(session: Session) -> str:
+    print("=" * 50)
+    print("DÉMARRAGE INGESTION STG")
+    print("=" * 50)
+
     if not os.path.exists(DATA_DIR):
+        print(f"ERREUR — Dossier data introuvable : {DATA_DIR}")
         return "ERREUR"
 
     create_stage_and_format(session)
@@ -129,6 +138,9 @@ def main(session: Session) -> str:
             overall_success = False
 
     status = "SUCCÈS" if overall_success else "TERMINÉ AVEC ERREURS"
+    print("=" * 50)
+    print(f"FIN INGESTION STG — {status}")
+    print("=" * 50)
     return status
 
 
