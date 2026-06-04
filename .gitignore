@@ -56,3 +56,7 @@ HISTORY/
 dbt/profiles.yml
 dbt/target/
 dbt/logs/
+
+
+# autres
+notes.txt

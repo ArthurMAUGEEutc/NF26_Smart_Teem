@@ -1,17 +1,32 @@
-# Copier ce fichier en profiles.yml et le remplir (ne jamais committer profiles.yml)
-# Placer profiles.yml dans ~/.dbt/ ou utiliser : dbt run --profiles-dir .
+# Copier ce fichier en profiles.yml (ne jamais committer profiles.yml)
+# Configuration Snowflake unique : load_stg (local), install_sid et dbt run
+#
+# 1) cp dbt/profiles.yml.example dbt/profiles.yml
+# 2) Remplacer VOTRE_ACCOUNT (compte commun) et VOTRE_USER (login personnel) sous outputs.local
+# 3) Même account sous outputs.workspace
+#
+# PC (load_stg, install_sid local) : target: local
+# Workspace (install_sid, dbt)       : target: workspace  +  dbt run --profiles-dir .
 
 nf26_hospital:
-  target: dev
+  target: local
   outputs:
-    dev:
+    local:
       type: snowflake
-      account:       "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
-      host:          "{{ env_var('SNOWFLAKE_HOST', '') }}"
+      account: "VOTRE_ACCOUNT"         # ex. WOALAUR-YB99371
+      user: "VOTRE_USER"               # login Snowflake (ex. MATHIEU)
+      authenticator: snowflake         # ou externalbrowser si SSO/SAML activé sur le compte
+      password: "VOTRE_MOT_DE_PASSE"  # à remplir ; commenter si authenticator: externalbrowser
+      warehouse: COMPUTE_WH
+      role: ACCOUNTADMIN
+
+    workspace:
+      type: snowflake
+      account: "VOTRE_ACCOUNT"
       authenticator: oauth
-      token:         "{{ env_var('SNOWFLAKE_OAUTH_TOKEN') }}"
-      role:          ACCOUNTADMIN
-      warehouse:     COMPUTE_WH
-      database:      SOC
-      schema:        PUBLIC
-      threads:       4
+      token: "{{ env_var('SNOWFLAKE_OAUTH_TOKEN') }}"
+      warehouse: COMPUTE_WH
+      role: ACCOUNTADMIN
+      database: SOC
+      schema: PUBLIC
+      threads: 4
