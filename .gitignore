@@ -50,6 +50,6 @@ logs
 ~$*.xlsx
 
 # dbt
-dbt/profiles.yml
-dbt/target/
-dbt/logs/
+dbt_hopital/profiles.yml
+dbt_hopital/target/
+dbt_hopital/logs/
