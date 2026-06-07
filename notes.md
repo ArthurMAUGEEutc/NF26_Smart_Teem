@@ -17,3 +17,5 @@ Pour le lot 3 :
 Tâches à se répartir : 
 - Models des 7 tables (wrk + soc) = 14 modèles à faire
 - Airflows : 2 DAGs (je pense bien 2 personnes pour comprendre airflow + faire)
+
+- Faire en sorte que ça process les fichiers du début à la fin par ordre chronologique 

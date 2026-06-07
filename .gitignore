@@ -53,3 +53,6 @@ logs
 dbt_hopital/profiles.yml
 dbt_hopital/target/
 dbt_hopital/logs/
+
+#venv
+.venv/
