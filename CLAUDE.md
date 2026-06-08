@@ -17,7 +17,7 @@ Le SID ingère des données hospitalières (fichiers `.txt` fournis quotidiennem
 | **Snowflake** | Cloud DWH (AWS, Enterprise) |
 | **dbt Core** | Transformations SQL (models WRK, SOC) |
 | **Apache Airflow** | Orchestration des pipelines |
-| **Python / uv** | Script d'installation (`install_sid.py`) |
+| **Python / uv** | Scripts d'installation (`SQL/install_sid.py`) et chargement STG (`dbt/load_stg.py`) |
 | **Power BI** | Reporting final |
 | **GitHub** | Versionning |
 | **Notion** | Suivi de projet |
@@ -112,7 +112,7 @@ UPDATE TCH.T_SUIV_RUN  SET RUN_END_DTTM  = CURRENT_TIMESTAMP, RUN_STTS_CD  = 'KO
 
 ---
 
-## Script d'installation (`src/install_sid.py`)
+## Script d'installation (`SQL/install_sid.py`)
 
 Script Python **idempotent** qui exécute les scripts SQL dans l'ordre :
 1. `create_db.sql` — bases STG, SOC, TCH (`IF NOT EXISTS`)
@@ -122,8 +122,33 @@ Script Python **idempotent** qui exécute les scripts SQL dans l'ordre :
 
 Contraintes respectées :
 - Toujours termine avec `sys.exit(0)` (jamais d'erreur fatale)
-- Logue tout dans `src/installation.log`
+- Logue tout dans `logs/installation.log`
 - Connexion via OAuth token Snowflake (`SNOWFLAKE_TOKEN_FILE_PATH`)
+- Module partagé : [`SQL/snowflake_utils.py`](SQL/snowflake_utils.py)
+
+### Exécution (Workspace Snowflake)
+
+```bash
+python SQL/install_sid.py
+python dbt/load_stg.py --date 20260429
+cd dbt && dbt run
+```
+
+---
+
+## Chargement STG (`dbt/load_stg.py`)
+
+Script Python qui charge les fichiers `.txt` d'**un seul jour** dans les tables STG via `PUT` + `COPY INTO` :
+- Source : `Inputs_Projets_NF26_AI07/Data Hospital/BDD_HOSPITAL_{YYYYMMDD}/`
+- Stage : `STG.PUBLIC.STG_LOAD_STAGE` (voir [`SQL/create_stg_stage.sql`](SQL/create_stg_stage.sql))
+- Log : `logs/load_stg.log`
+- Suivi TCH : entrées dans `TCH.PUBLIC.T_SUIV_RUN` / `T_SUIV_TRMT`
+- Historisation : snapshot STG dans `HISTORY/` avant truncate (rétention configurable, défaut 2 jours)
+
+Arguments CLI :
+- `--date YYYYMMDD` (obligatoire)
+- `--retention-days N` (défaut 2, ou env `STG_HISTORY_RETENTION_DAYS`)
+- `--skip-history` (désactive l'historisation)
 
 ---
 
@@ -147,7 +172,7 @@ Tables : `CHAMBRE`, `CONSULTATION`, `HOSPITALISATION`, `MEDICAMENT`, `PATIENT`, 
 ### Détail Lot 2 (en cours)
 
 - **2.1** Installation du SID → `install_sid.py` + scripts SQL ✓
-- **2.2** Ingestion STG → scripts SQL d'alimentation des tables STG depuis les fichiers `.txt`
+- **2.2** Ingestion STG → `dbt/load_stg.py` + `SQL/create_stg_stage.sql` ✓
 - **2.3** Macros de suivi d'exécution + models dbt WRK/SOC pour ROOM, PARTY, MEDICINE ← **focus actuel**
 
 ---

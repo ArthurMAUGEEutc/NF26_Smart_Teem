@@ -1,0 +1,19 @@
+-- ============================================================
+-- Stage interne et file format pour le chargement STG
+-- ============================================================
+
+USE ROLE ACCOUNTADMIN;
+USE DATABASE STG;
+
+CREATE SCHEMA IF NOT EXISTS STG.PUBLIC;
+
+CREATE STAGE IF NOT EXISTS STG.PUBLIC.STG_LOAD_STAGE;
+
+CREATE FILE FORMAT IF NOT EXISTS STG.PUBLIC.FF_TXT_CSV
+    TYPE = CSV
+    FIELD_DELIMITER = ';'
+    SKIP_HEADER = 1
+    FIELD_OPTIONALLY_ENCLOSED_BY = '"'
+    NULL_IF = ('', 'NULL')
+    EMPTY_FIELD_AS_NULL = TRUE
+    ENCODING = 'UTF8';

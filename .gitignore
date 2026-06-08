@@ -44,15 +44,24 @@ yarn-error.log
 *.log
 logs
 
+# Historisation snapshots STG
+HISTORY/
+
 # Fichiers temporaires Microsoft Office
 ~$*
 ~$*.xls
 ~$*.xlsx
 
-# dbt
+# dbt (projet hopital + scripts load_stg)
 dbt_hopital/profiles.yml
 dbt_hopital/target/
 dbt_hopital/logs/
+dbt/profiles.yml
+dbt/target/
+dbt/logs/
 
-#venv
+# venv
 .venv/
+
+# autres
+notes.txt
