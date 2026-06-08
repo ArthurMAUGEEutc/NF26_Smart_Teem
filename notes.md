@@ -2,7 +2,7 @@ Pour le lot 2 :
 - Développement du script de création des bases de donnée : créer 3 bases : STG et pour socle SOC et TCH
 - Développement des scripts de création des tables (un script par base de données) => utiliser le MPD stg et socle
 - Développement du script `SQL/install_sid.py` d'exécution de l'installation du SID
-- Développement du script `dbt/load_stg.py` de chargement STG depuis les fichiers `.txt` (exécution locale)
+- Développement du script `src/load_data.py` de chargement STG depuis les fichiers `.txt` (local et workspace)
 - Développement des macros : comment on passe les paramètres ? comment on lance les macros ? 
 
 Est-ce qu'il faut que les fichiers load_data et install_sid on les run depuis un terminal et qu'ils se connectent à snowflake,
@@ -19,4 +19,4 @@ Tâches à se répartir :
 - Models des 7 tables (wrk + soc) = 14 modèles à faire
 - Airflows : 2 DAGs (je pense bien 2 personnes pour comprendre airflow + faire)
 
-- Faire en sorte que ça process les fichiers du début à la fin par ordre chronologique 
+- Traitement chronologique jour par jour : `src/run_daily_pipeline.py` + curseur `logs/pipeline_date_cursor.txt` (DAG `dag_run_pipeline`, +1 jour à chaque run réussi à 6h, départ `20260429`)

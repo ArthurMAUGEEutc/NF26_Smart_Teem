@@ -17,7 +17,7 @@ Le SID ingère des données hospitalières (fichiers `.txt` fournis quotidiennem
 | **Snowflake** | Cloud DWH (AWS, Enterprise) |
 | **dbt Core** | Transformations SQL (models WRK, SOC) |
 | **Apache Airflow** | Orchestration des pipelines |
-| **Python / uv** | Scripts d'installation (`SQL/install_sid.py`) et chargement STG (`dbt/load_stg.py`) |
+| **Python / uv** | Scripts d'installation (`SQL/install_sid.py`) et chargement STG (`src/load_data.py`) |
 | **Power BI** | Reporting final |
 | **GitHub** | Versionning |
 | **Notion** | Suivi de projet |
@@ -123,25 +123,28 @@ Script Python **idempotent** qui exécute les scripts SQL dans l'ordre :
 Contraintes respectées :
 - Toujours termine avec `sys.exit(0)` (jamais d'erreur fatale)
 - Logue tout dans `logs/installation.log`
-- Connexion via OAuth token Snowflake (`SNOWFLAKE_TOKEN_FILE_PATH`)
+- Connexion via [`dbt_hopital/profiles.yml`](dbt_hopital/profiles.yml) (cible `local` ou `workspace`)
 - Module partagé : [`SQL/snowflake_utils.py`](SQL/snowflake_utils.py)
 
-### Exécution (Workspace Snowflake)
+### Exécution
+
+Depuis la racine du dépôt (Linux, macOS, Windows — voir [README.md](README.md)) :
 
 ```bash
-python SQL/install_sid.py
-python dbt/load_stg.py --date 20260429
-cd dbt && dbt run
+cp dbt_hopital/profiles.yml.example dbt_hopital/profiles.yml   # une fois, renseigner credentials
+uv run python SQL/install_sid.py
+uv run python src/load_data.py --date 20260429
+uv run dbt run --project-dir dbt_hopital --profiles-dir dbt_hopital
 ```
 
 ---
 
-## Chargement STG (`dbt/load_stg.py`)
+## Chargement STG (`src/load_data.py`)
 
-Script Python qui charge les fichiers `.txt` d'**un seul jour** dans les tables STG via `PUT` + `COPY INTO` :
-- Source : `Inputs_Projets_NF26_AI07/Data Hospital/BDD_HOSPITAL_{YYYYMMDD}/`
+Script Python qui charge les fichiers `.txt` d'**un seul jour** dans les tables STG via `PUT` + `COPY INTO` (local ou Workspace) :
+- Source : `Inputs_Projets_NF26_AI07/Data Hospital/BDD_HOSPITAL_{YYYYMMDD}/` (ou `STG_DATA_DIR`, ou `/workspace/.../data`)
 - Stage : `STG.PUBLIC.STG_LOAD_STAGE` (voir [`SQL/create_stg_stage.sql`](SQL/create_stg_stage.sql))
-- Log : `logs/load_stg.log`
+- Log : `logs/load_data.log`
 - Suivi TCH : entrées dans `TCH.PUBLIC.T_SUIV_RUN` / `T_SUIV_TRMT`
 - Historisation : snapshot STG dans `HISTORY/` avant truncate (rétention configurable, défaut 2 jours)
 
@@ -149,6 +152,25 @@ Arguments CLI :
 - `--date YYYYMMDD` (obligatoire)
 - `--retention-days N` (défaut 2, ou env `STG_HISTORY_RETENTION_DAYS`)
 - `--skip-history` (désactive l'historisation)
+
+---
+
+## Orchestration Airflow (`dags/dag_run_pipeline.py`)
+
+DAG quotidien (6h00) qui appelle [`src/run_daily_pipeline.py`](src/run_daily_pipeline.py) via `PythonOperator` (compatible Linux, macOS, Windows) :
+
+1. Lit la date à traiter dans `logs/pipeline_date_cursor.txt` (ou `20260429` si absent)
+2. Vérifie que `BDD_HOSPITAL_{date}/` contient les 7 fichiers `.txt`
+3. Si fichiers absents : **échec explicite**, pas de load/dbt, curseur inchangé
+4. Sinon : `load_data_day` → `dbt run` → curseur avancé de **+1 jour**
+
+Lancement Airflow : `./run_airflow.sh` (Linux/macOS), `.\run_airflow.ps1` (Windows), ou `uv run airflow standalone` avec `AIRFLOW_HOME` = racine du repo. Voir [README.md](README.md).
+
+Log orchestrateur : `logs/run_daily_pipeline.log`
+
+Logs dbt (`dbt run`) : `logs/dbt.log` (config `log-path: ../logs` dans `dbt_hopital/dbt_project.yml`).
+
+Réinitialiser le parcours : supprimer `logs/pipeline_date_cursor.txt`.
 
 ---
 
@@ -172,7 +194,7 @@ Tables : `CHAMBRE`, `CONSULTATION`, `HOSPITALISATION`, `MEDICAMENT`, `PATIENT`, 
 ### Détail Lot 2 (en cours)
 
 - **2.1** Installation du SID → `install_sid.py` + scripts SQL ✓
-- **2.2** Ingestion STG → `dbt/load_stg.py` + `SQL/create_stg_stage.sql` ✓
+- **2.2** Ingestion STG → `src/load_data.py` + `SQL/create_stg_stage.sql` ✓
 - **2.3** Macros de suivi d'exécution + models dbt WRK/SOC pour ROOM, PARTY, MEDICINE ← **focus actuel**
 
 ---

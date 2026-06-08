@@ -13,9 +13,9 @@ import yaml
 
 SQL_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SQL_DIR.parent
-DBT_PROFILE_NAME = "nf26_hospital"
-PROFILES_PATH = PROJECT_ROOT / "dbt" / "profiles.yml"
-PROFILES_EXAMPLE_PATH = PROJECT_ROOT / "dbt" / "profiles.yml.example"
+DBT_PROFILE_NAME = "dbt_hopital"
+PROFILES_PATH = PROJECT_ROOT / "dbt_hopital" / "profiles.yml"
+PROFILES_EXAMPLE_PATH = PROJECT_ROOT / "dbt_hopital" / "profiles.yml.example"
 
 CONNECT_KEYS = frozenset(
     {
@@ -197,7 +197,7 @@ def resolve_target() -> str:
 
 
 def load_dbt_profile(target: str | None = None) -> dict:
-    """Charge la sortie active depuis dbt/profiles.yml."""
+    """Charge la sortie active depuis dbt_hopital/profiles.yml."""
     resolved_target = target or resolve_target()
     if not PROFILES_PATH.is_file():
         raise FileNotFoundError(
@@ -297,7 +297,7 @@ def _connect_local(log: logging.Logger, profile: dict):
 
 def get_snowflake_connection(logger: logging.Logger | None = None):
     """
-    Connexion Snowflake via dbt/profiles.yml (cibles local / workspace).
+    Connexion Snowflake via dbt_hopital/profiles.yml (cibles local / workspace).
     """
     silence_external_loggers()
     log = logger or logging.getLogger(__name__)

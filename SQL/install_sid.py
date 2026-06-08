@@ -10,7 +10,7 @@ Exécution :
   python SQL/install_sid.py
   %run SQL/install_sid.py   (notebook Workspace)
 
-Connexion : dbt/profiles.yml (cible workspace ou local selon l'environnement).
+Connexion : dbt_hopital/profiles.yml (cible workspace ou local selon l'environnement).
 """
 
 from __future__ import annotations

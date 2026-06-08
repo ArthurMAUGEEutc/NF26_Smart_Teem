@@ -1,11 +1,33 @@
-hopital_dw:
-  target: dev
+# Copier ce fichier en profiles.yml (ne jamais committer profiles.yml)
+# Configuration Snowflake unique : load_data, install_sid et dbt run
+#
+# 1) cp dbt_hopital/profiles.yml.example dbt_hopital/profiles.yml
+# 2) Remplacer VOTRE_ACCOUNT (compte commun) et VOTRE_USER (login personnel) sous outputs.local
+# 3) Même account sous outputs.workspace
+#
+# PC local  : target local  (scripts Python + dbt run --profiles-dir dbt_hopital)
+# Workspace : target workspace (auto si token OAuth présent)
+
+dbt_hopital:
+  target: local
   outputs:
-    dev:
+    local:
       type: snowflake
-      account: "ton_account"
-      user: "ton_user"
-      password: "ton_password"
+      account: "VOTRE_ACCOUNT"         # ex. WOALAUR-YB99371
+      user: "VOTRE_USER"               # login Snowflake (ex. MATHIEU)
+      authenticator: snowflake         # ou externalbrowser si SSO/SAML activé sur le compte
+      password: "VOTRE_MOT_DE_PASSE"  # à remplir ; commenter si authenticator: externalbrowser
+      role: ACCOUNTADMIN
+      warehouse: COMPUTE_WH
+      database: SOC
+      schema: PUBLIC
+      threads: 4
+
+    workspace:
+      type: snowflake
+      account: "VOTRE_ACCOUNT"
+      authenticator: oauth
+      token: "{{ env_var('SNOWFLAKE_OAUTH_TOKEN') }}"
       role: ACCOUNTADMIN
       warehouse: COMPUTE_WH
       database: SOC

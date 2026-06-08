@@ -1,4 +1,4 @@
-# Lance Airflow avec AIRFLOW_HOME pointant sur la racine du projet,
-# quel que soit l'emplacement où le projet est cloné.
+# Lance Airflow avec AIRFLOW_HOME pointant sur la racine du projet (Windows).
 $env:AIRFLOW_HOME = $PSScriptRoot
-& "$PSScriptRoot\.venv\Scripts\airflow.exe" standalone
+Set-Location $PSScriptRoot
+uv run airflow standalone

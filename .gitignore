@@ -52,16 +52,22 @@ HISTORY/
 ~$*.xls
 ~$*.xlsx
 
-# dbt (projet hopital + scripts load_stg)
+# dbt
 dbt_hopital/profiles.yml
 dbt_hopital/target/
-dbt_hopital/logs/
-dbt/profiles.yml
-dbt/target/
-dbt/logs/
 
 # venv
 .venv/
+
+# Curseur date pipeline Airflow
+logs/pipeline_date_cursor.txt
+
+# Airflow local (AIRFLOW_HOME = racine du repo)
+airflow.cfg
+airflow.db
+airflow-webserver.pid
+webserver_config.py
+standalone_admin_password.txt
 
 # autres
 notes.txt

@@ -1,71 +1,62 @@
 # Hopital DW — Setup dbt
 
+Guide dbt complémentaire. Pour l'onboarding global (install, load, pipeline, Airflow), voir [README.md](README.md).
+
 ## Prérequis
 - Accès au compte Snowflake du projet
-- Avoir cloné le repo 
+- Avoir cloné le repo
 
 ---
 
 ## 1. Installer dbt
 
 ```bash
-pip install dbt-snowflake
+uv sync
 ```
 
 Vérifie l'installation :
+
 ```bash
-dbt --version
+uv run dbt --version
 ```
 
 ---
 
 ## 2. Créer ton profil de connexion
 
-Le fichier `profiles.yml` contient tes credentials Snowflake. Il doit être placé dans ton dossier personnel, dans un sous-dossier `.dbt` :
- 
-| Système | Emplacement |
-|---|---|
-| Windows | `C:\Users\ton_nom\.dbt\profiles.yml` |
-| Mac | `/Users/ton_nom/.dbt/profiles.yml` |
-| Linux | `/home/ton_nom/.dbt/profiles.yml` |
+Le fichier `profiles.yml` contient tes credentials Snowflake. Il est placé **dans le projet** :
+
+```
+dbt_hopital/profiles.yml   ← ne jamais committer (gitignoré)
+```
 
 **Étapes :**
- 
-1. Crée le dossier `.dbt` dans ton dossier personnel s'il n'existe pas
-2. Copie le fichier `profiles.yml.example` du repo dans ce dossier
-3. Renomme-le `profiles.yml`
-4. Ouvre-le et remplace les valeurs :
 
-```yaml
-dbt_hopital:
-  target: dev
-  outputs:
-    dev:
-      type: snowflake
-      account: "woalaur-yb99371"   # identifiant du compte Snowflake (ne pas modifier)
-      user: "ton_user"             # ton identifiant Snowflake (prénom en majuscule)
-      password: "ton_password"     # ton mot de passe Snowflake
-      role: ACCOUNTADMIN
-      warehouse: COMPUTE_WH
-      database: SOC
-      schema: PUBLIC
-      threads: 4
-```
+1. Copie le template :
+
+   **Linux / macOS**
+   ```bash
+   cp dbt_hopital/profiles.yml.example dbt_hopital/profiles.yml
+   ```
+
+   **Windows (PowerShell)**
+   ```powershell
+   Copy-Item dbt_hopital/profiles.yml.example dbt_hopital/profiles.yml
+   ```
+
+2. Ouvre `dbt_hopital/profiles.yml` et remplace les valeurs sous `outputs.local` :
+   - `account` : identifiant du compte Snowflake (commun au projet)
+   - `user` : ton login Snowflake
+   - `password` : ton mot de passe
+
+La cible `workspace` (OAuth) est utilisée automatiquement dans le Workspace Snowflake.
 
 ---
 
 ## 3. Tester la connexion
 
-Place-toi dans le dossier du projet dbt :
-
 ```bash
-cd dbt_hopital
-```
-
-Lance le test de connexion :
-
-```bash
-dbt debug
+uv run dbt debug --project-dir dbt_hopital --profiles-dir dbt_hopital
 ```
 
 Si tout est OK tu verras :
@@ -73,8 +64,38 @@ Si tout est OK tu verras :
 All checks passed!
 ```
 
+---
+
+## 4. Lancer les transformations
+
+```bash
+uv run dbt run --project-dir dbt_hopital --profiles-dir dbt_hopital
+```
+
+Pour un sous-ensemble de modèles :
+
+```bash
+uv run dbt run --project-dir dbt_hopital --profiles-dir dbt_hopital --select wrk
+```
+
+---
+
+## Pipeline journalier et Airflow
+
+Le chargement STG + `dbt run` séquentiel est orchestré par :
+
+```bash
+uv run python src/run_daily_pipeline.py
+```
+
+Voir [README.md](README.md) pour Airflow et les variables d'environnement (`STG_DATA_DIR`, `DBT_TARGET`).
+
+---
+
 ## En cas de problème
 
-- **`dbt debug` échoue** → vérifie ton user/password dans `~/.dbt/profiles.yml`
-- **`command not found: dbt`** → relance `pip install dbt-snowflake`
+- **`dbt debug` échoue** → vérifie ton user/password dans `dbt_hopital/profiles.yml`
+- **`command not found: dbt`** → relance `uv sync`, utilise `uv run dbt`
 - **Erreur de permission Snowflake** → vérifie que ton rôle est bien `ACCOUNTADMIN`
+- **Scripts Python (`install_sid`, `load_data`)** → utilisent le même `dbt_hopital/profiles.yml` via `snowflake_utils`
+- **Logs dbt** → `logs/dbt.log` à la racine du projet (pas dans `dbt_hopital/logs/`)

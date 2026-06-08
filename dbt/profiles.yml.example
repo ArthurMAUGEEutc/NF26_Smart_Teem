@@ -1,3 +1,4 @@
+# DEPRECATED — Utiliser dbt_hopital/profiles.yml.example à la place.
 # Copier ce fichier en profiles.yml (ne jamais committer profiles.yml)
 # Configuration Snowflake unique : load_stg (local), install_sid et dbt run
 #

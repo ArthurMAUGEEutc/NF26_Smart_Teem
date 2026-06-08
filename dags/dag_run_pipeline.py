@@ -1,31 +1,31 @@
 """
 DAG : dag_run_pipeline
-Ordonnancement quotidien du pipeline hospitalier :
-  1. Ingestion STG  → load_data.py
-  2. Transformation → dbt run
+Ordonnancement quotidien du pipeline hospitalier (traitement séquentiel jour par jour) :
+  run_daily_pipeline.py → curseur date + load_data + dbt run
 """
 
 import os
+import subprocess
+import sys
 from datetime import datetime, timedelta
 
 from airflow import DAG
-from airflow.providers.standard.operators.bash import BashOperator
+from airflow.providers.standard.operators.python import PythonOperator
 
-# Dossier racine du projet dbt 
+START_DATE = datetime(2026, 4, 29)
+
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DBT_PROJECT_DIR = os.path.join(PROJECT_ROOT, "dbt_hopital")
+RUN_PIPELINE_SCRIPT = os.path.join(PROJECT_ROOT, "src", "run_daily_pipeline.py")
 
-# Dossier où se trouve load_data.py
-LOAD_DATA_SCRIPT = os.path.join(PROJECT_ROOT, "src", "load_data.py")
 
-# Chemin vers le profiles.yml (chacun a le sien dans son dossier utilisateur ~/.dbt)
-DBT_PROFILES_DIR = os.path.expanduser("~/.dbt")
+def _run_pipeline() -> None:
+    rc = subprocess.run(
+        [sys.executable, RUN_PIPELINE_SCRIPT],
+        check=False,
+    ).returncode
+    if rc != 0:
+        raise RuntimeError(f"run_daily_pipeline exited with {rc}")
 
-# Chemin du venv qui contient snowflake-connector-python + dbt-snowflake
-PYTHON_BIN = os.path.join(PROJECT_ROOT, ".venv", "Scripts", "python.exe")
-DBT_BIN    = os.path.join(PROJECT_ROOT, ".venv", "Scripts", "dbt.exe")
-
-# Arguments par défaut
 default_args = {
     "owner": "data_team",
     "depends_on_past": False,
@@ -34,32 +34,17 @@ default_args = {
     "email_on_failure": False,
 }
 
-# Définition du DAG
 with DAG(
     dag_id="dag_run_pipeline",
-    description="Ingestion STG + alimentation datawarehouse (dbt)",
+    description="Pipeline séquentiel : ingestion STG + dbt (curseur date +1/jour)",
     default_args=default_args,
-    start_date=datetime(2026, 1, 1),
-    schedule_interval="0 6 * * *",   # tous les jours à 6h00
+    start_date=START_DATE,
+    schedule="0 6 * * *",
     catchup=False,
     tags=["hopital", "ingestion", "dbt"],
 ) as dag:
 
-    #Ingestion des données dans STG 
-    ingestion_stg = BashOperator(
-        task_id="ingestion_stg",
-        bash_command=f"{PYTHON_BIN} {LOAD_DATA_SCRIPT}",
+    run_pipeline = PythonOperator(
+        task_id="run_pipeline",
+        python_callable=_run_pipeline,
     )
-
-    # Alimentation WRK + SOC via dbt
-    dbt_run = BashOperator(
-        task_id="dbt_run",
-        bash_command=(
-            f"{DBT_BIN} run "
-            f"--project-dir {DBT_PROJECT_DIR} "
-            f"--profiles-dir {DBT_PROFILES_DIR}"
-        ),
-    )
-
-    # Dépendance temporelle des tâches, ingestion avant transformation
-    ingestion_stg >> dbt_run
