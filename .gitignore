@@ -71,3 +71,4 @@ standalone_admin_password.txt
 
 # autres
 notes.txt
+airflow.db*
