@@ -17,7 +17,10 @@ JOIN SOC.PUBLIC.R_PART p
  AND p.SRC_TYP = 'Patient'
 
 {% if is_incremental() %}
-WHERE (p.PART_ID, w.STRT_VALD_DTTM) NOT IN (
-    SELECT PART_ID, STRT_VALD_DTTM FROM {{ this }}
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM {{ this }} t
+    WHERE t.PART_ID       = p.PART_ID
+      AND t.STRT_VALD_DTTM = w.STRT_VALD_DTTM
 )
 {% endif %}
