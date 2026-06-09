@@ -99,36 +99,45 @@ Guide détaillé dbt : [tuto_dbt.md](tuto_dbt.md)
 
 ---
 
-## 6. Pipeline journalier (load + dbt + curseur date)
+## 6. Pipeline journalier local (indépendant du DAG)
 
-Traite **un jour** à la fois : charge STG, exécute `dbt run`, avance le curseur de +1 jour en cas de succès.
+[`src/run_daily_pipeline.py`](src/run_daily_pipeline.py) exécute **un jour** du pipeline sans Airflow. La date est fixée dans le code (`LOCAL_RUN_DATE`, défaut `20260429`) — indépendante du DAG et d'Airflow.
 
 ```bash
 uv run python src/run_daily_pipeline.py
 ```
 
-Comportement :
+Étapes :
 
-1. Lit la date dans `logs/pipeline_date_cursor.txt` (défaut `20260429` si absent)
-2. Vérifie la présence des 7 fichiers `.txt` du jour
-3. Si fichiers absents → échec, curseur inchangé
-4. Sinon → load STG → `dbt run` → curseur +1 jour
+1. Valide `LOCAL_RUN_DATE` et la présence des 7 fichiers `.txt` du jour
+2. Si fichiers absents → échec
+3. Sinon → load STG → `dbt run`
 
 Log : `logs/run_daily_pipeline.log`
 
-Réinitialiser le parcours : supprimer `logs/pipeline_date_cursor.txt`.
+Pour traiter un autre jour : modifier `LOCAL_RUN_DATE` dans `src/run_daily_pipeline.py`.
 
 ---
 
-## 7. Airflow (orchestration optionnelle)
+## 7. Airflow (orchestration)
 
-Le DAG `dag_run_pipeline` planifie le pipeline journalier à **6h00** et peut aussi être déclenché manuellement.
+Le DAG [`dags/dag_run_pipeline.py`](dags/dag_run_pipeline.py) n'a **pas de planification automatique** : il est déclenché uniquement par **exécution manuelle** ou **rattrapage** (backfill). Tâches visibles dans l'UI :
+
+`validate_date` → `ingestion_stg` → `dbt_run`
+
+- **Date métier** : `ds_nodash` (intervalle de données Airflow, ex. `20260429`)
+- **ingestion_stg** : `load_data.py --date …`
+- **dbt_run** : `dbt run --project-dir dbt_hopital --profiles-dir dbt_hopital`
+- **Séquence multi-jours** : `depends_on_past=True` + `max_active_runs=1` (le jour N+1 attend le succès du jour N)
+
+Le DAG n'appelle pas `run_daily_pipeline.py`.
 
 ### Démarrer Airflow
 
 **Linux / macOS**
 
 ```bash
+chmod +x run_airflow.sh scripts/check_airflow_ui.sh   # une fois
 ./run_airflow.sh
 ```
 
@@ -138,31 +147,48 @@ Le DAG `dag_run_pipeline` planifie le pipeline journalier à **6h00** et peut au
 .\run_airflow.ps1
 ```
 
+Les scripts `run_airflow.*` configurent `AIRFLOW_HOME`, l'écoute sur `127.0.0.1:8080` et affichent l'URL au démarrage.
+
 **Alternative (toutes plateformes)**
 
 ```bash
-# Linux / macOS
 export AIRFLOW_HOME="$(pwd)"
+export AIRFLOW__API__HOST="127.0.0.1"
+export AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS="true"
 uv run airflow standalone
 ```
 
-```powershell
-# Windows PowerShell
-$env:AIRFLOW_HOME = (Get-Location).Path
-uv run airflow standalone
-```
+Interface web : **http://127.0.0.1:8080** (préférer `127.0.0.1` à `localhost`).
 
-Au premier lancement, un login/mot de passe admin s'affiche dans le terminal.  
-Interface web : http://localhost:8080
-
-### Déclencher le pipeline manuellement
+### Dépannage UI
 
 ```bash
-export AIRFLOW_HOME="$(pwd)"   # ou $env:AIRFLOW_HOME sur Windows
+./scripts/check_airflow_ui.sh          # Linux / macOS
+.\scripts\check_airflow_ui.ps1         # Windows
+```
+
+- Si Airflow tourne dans **screen** : `screen -r` pour voir les logs et le mot de passe admin
+- Mot de passe : `standalone_admin_password.txt` à la racine du dépôt (`AIRFLOW_HOME`)
+- Ne pas lancer deux instances (port 8080 déjà utilisé)
+
+### Déclencher le pipeline
+
+**Un seul jour** (UI : **Exécution unique**, ou CLI) :
+
+```bash
+export AIRFLOW_HOME="$(pwd)"
 uv run airflow dags trigger dag_run_pipeline
 ```
 
-Ou via l'UI : DAG **dag_run_pipeline** → **Trigger**.
+**Plusieurs jours** (UI : **Rattrapage** avec plage début/fin, intervalle `[début, fin)` — le jour `fin` est exclu) :
+
+```bash
+export AIRFLOW_HOME="$(pwd)"
+uv run airflow backfill create --dag-id dag_run_pipeline \
+  --start-date 2026-04-29 --end-date 2026-05-03
+```
+
+Chaque DagRun traite un jour ; l'enchaînement est séquentiel (`depends_on_past`).
 
 ---
 
@@ -182,7 +208,9 @@ Ou via l'UI : DAG **dag_run_pipeline** → **Trigger**.
 ```
 Inputs_Projets_NF26_AI07/Data Hospital/BDD_HOSPITAL_YYYYMMDD/  ← fichiers sources
 SQL/                    ← scripts DDL + install_sid.py
-src/                    ← load_data.py, run_daily_pipeline.py
+src/                    ← load_data.py, pipeline_common.py, run_daily_pipeline.py
+scripts/                ← check_airflow_ui.sh / .ps1
+dags/                   ← dag_run_pipeline.py
 dbt_hopital/            ← projet dbt (models, macros, profiles.yml)
 dags/                   ← DAG Airflow
 logs/                   ← logs applicatifs (gitignoré)

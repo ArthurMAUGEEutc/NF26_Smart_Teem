@@ -1,69 +1,18 @@
 """
-run_daily_pipeline.py — Orchestrateur DAG (traitement séquentiel jour par jour)
+run_daily_pipeline.py — Exécution locale pour un jour (indépendant du DAG Airflow)
 
-Lit/écrit logs/pipeline_date_cursor.txt, charge STG pour la date courante, lance dbt run,
-puis avance le curseur de +1 jour en cas de succès.
+Charge STG et lance dbt run pour LOCAL_RUN_DATE (modifiable dans ce fichier).
 
   python src/run_daily_pipeline.py
 """
 
 from __future__ import annotations
 
-import shutil
-import subprocess
-import sys
-from datetime import datetime, timedelta
-from pathlib import Path
+from pipeline_common import project_root, run_dbt, run_ingestion, setup_paths
 
-PIPELINE_INITIAL_DATE = "20260429"
-CURSOR_BASENAME = "pipeline_date_cursor.txt"
+LOCAL_RUN_DATE = "20260429"
+
 LOG_BASENAME = "run_daily_pipeline.log"
-
-
-def _project_root() -> Path:
-    return Path(__file__).resolve().parent.parent
-
-
-def _setup_paths() -> tuple[Path, Path]:
-    root = _project_root()
-    sql_dir = root / "SQL"
-    src_dir = root / "src"
-    if str(sql_dir) not in sys.path:
-        sys.path.insert(0, str(sql_dir))
-    if str(src_dir) not in sys.path:
-        sys.path.insert(0, str(src_dir))
-    return root, sql_dir
-
-
-def advance_date(yyyymmdd: str) -> str:
-    dt = datetime.strptime(yyyymmdd, "%Y%m%d")
-    return (dt + timedelta(days=1)).strftime("%Y%m%d")
-
-
-def read_cursor(cursor_file: Path) -> str:
-    if cursor_file.is_file():
-        text = cursor_file.read_text(encoding="utf-8").strip()
-        if text:
-            return text
-    return PIPELINE_INITIAL_DATE
-
-
-def write_cursor(cursor_file: Path, date: str) -> None:
-    cursor_file.parent.mkdir(parents=True, exist_ok=True)
-    cursor_file.write_text(f"{date}\n", encoding="utf-8")
-
-
-def resolve_dbt_bin(project_root: Path) -> str:
-    found = shutil.which("dbt")
-    if found:
-        return found
-    for candidate in (
-        project_root / ".venv" / "bin" / "dbt",
-        project_root / ".venv" / "Scripts" / "dbt.exe",
-    ):
-        if candidate.is_file():
-            return str(candidate)
-    return "dbt"
 
 
 def _finalize_logger(logger) -> None:
@@ -76,75 +25,49 @@ def _finalize_logger(logger) -> None:
 
 
 def main() -> int:
-    project_root, _sql_dir = _setup_paths()
+    root, _sql_dir = setup_paths()
 
-    from snowflake_utils import LOG_DIR, setup_logger  # noqa: E402
-    from load_data import (  # noqa: E402
-        _default_data_dir,
-        load_data_day,
-        validate_date,
-        validate_source_files,
-    )
+    from load_data import _default_data_dir, validate_date, validate_source_files  # noqa: E402
+    from snowflake_utils import setup_logger  # noqa: E402
 
     logger = setup_logger("run_daily_pipeline", LOG_BASENAME)
-    cursor_file = LOG_DIR / CURSOR_BASENAME
-    date = validate_date(read_cursor(cursor_file))
     data_dir = _default_data_dir()
-    dbt_project = project_root / "dbt_hopital"
-
-    logger.info("=" * 60)
-    logger.info(f"DÉMARRAGE PIPELINE QUOTIDIEN — date={date}")
-    logger.info(f"Curseur : {cursor_file}")
-    logger.info(f"Répertoire données : {data_dir}")
-    logger.info("=" * 60)
-    print(f"[run_daily_pipeline] Date à traiter : {date}")
+    dbt_project = root / "dbt_hopital"
 
     try:
+        date = validate_date(LOCAL_RUN_DATE)
         validate_source_files(date, data_dir)
-    except FileNotFoundError as exc:
-        msg = (
-            f"Aucun jeu de fichiers complet pour la date {date} — "
-            f"load et dbt ignorés, curseur inchangé ({cursor_file})."
-        )
+    except (ValueError, FileNotFoundError) as exc:
+        msg = f"Aucun jeu de fichiers complet pour {LOCAL_RUN_DATE} — load et dbt ignorés."
         logger.error(f"{msg} Détail : {exc}")
         print(f"[run_daily_pipeline] ERREUR : {msg}")
         _finalize_logger(logger)
         return 1
 
-    if not load_data_day(date, data_dir=data_dir):
-        logger.error(f"Échec load_data pour la date {date} — curseur inchangé")
+    logger.info("=" * 60)
+    logger.info(f"DÉMARRAGE PIPELINE LOCAL — date={date}")
+    logger.info(f"Répertoire données : {data_dir}")
+    logger.info("=" * 60)
+    print(f"[run_daily_pipeline] Date à traiter : {date}")
+
+    if not run_ingestion(date):
+        logger.error(f"Échec load_data pour la date {date}")
         print(f"[run_daily_pipeline] ERREUR : échec chargement STG pour {date}")
         _finalize_logger(logger)
         return 1
 
-    dbt_bin = resolve_dbt_bin(project_root)
-    logger.info(f"Lancement dbt run ({dbt_bin})")
+    logger.info("Lancement dbt run")
     print(f"[run_daily_pipeline] dbt run — projet {dbt_project}")
-    result = subprocess.run(
-        [
-            dbt_bin,
-            "run",
-            "--project-dir",
-            str(dbt_project),
-            "--profiles-dir",
-            str(dbt_project),
-        ],
-        cwd=project_root,
-        check=False,
-    )
-    if result.returncode != 0:
-        logger.error(
-            f"dbt run échoué (code {result.returncode}) — curseur inchangé"
-        )
-        print(f"[run_daily_pipeline] ERREUR : dbt run code {result.returncode}")
+    rc = run_dbt(root)
+    if rc != 0:
+        logger.error(f"dbt run échoué (code {rc})")
+        print(f"[run_daily_pipeline] ERREUR : dbt run code {rc}")
         _finalize_logger(logger)
-        return result.returncode
+        return rc
 
-    next_date = advance_date(date)
-    write_cursor(cursor_file, next_date)
-    logger.info(f"SUCCÈS pour {date} — curseur avancé vers {next_date}")
+    logger.info(f"SUCCÈS pour {date}")
     logger.info("=" * 60)
-    print(f"[run_daily_pipeline] SUCCÈS — prochaine date : {next_date}")
+    print(f"[run_daily_pipeline] SUCCÈS — date traitée : {date}")
     _finalize_logger(logger)
     return 0
 
