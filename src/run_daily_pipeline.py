@@ -73,7 +73,7 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    _setup_paths()
+    setup_paths()
     from snowflake_utils import cli_exit  
 
     cli_exit(main())
