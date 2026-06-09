@@ -1,5 +1,5 @@
 """
-load_data.py — Chargement des fichiers plats hospitaliers vers STG (Snowflake)
+Chargement des fichiers plats hospitaliers vers STG (Snowflake)
 
 Exécution locale ou Workspace :
   python src/load_data.py [--date YYYYMMDD] [--data-dir CHEMIN]
@@ -45,7 +45,7 @@ def resolve_sql_dir() -> Path:
 
 sys.path.insert(0, str(resolve_sql_dir()))
 
-from snowflake_utils import (  # noqa: E402
+from snowflake_utils import (  
     HISTORY_DIR,
     LOG_DIR,
     LOG_FORMAT,
@@ -241,7 +241,7 @@ def clear_stage(cursor) -> None:
 
 
 def _snowflake_put_uri(file_path: Path) -> str:
-    """URI file:// pour PUT Snowflake (sans encodage %20 des espaces)."""
+    """URI file:// pour PUT Snowflake"""
     resolved = file_path.resolve()
     posix = resolved.as_posix()
     if os.name == "nt":

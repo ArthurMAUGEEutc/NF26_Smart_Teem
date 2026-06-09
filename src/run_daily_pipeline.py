@@ -151,6 +151,6 @@ def main() -> int:
 
 if __name__ == "__main__":
     _setup_paths()
-    from snowflake_utils import cli_exit  # noqa: E402
+    from snowflake_utils import cli_exit  
 
     cli_exit(main())
