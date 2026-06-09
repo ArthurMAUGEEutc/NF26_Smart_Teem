@@ -157,20 +157,26 @@ Arguments CLI :
 
 ## Orchestration Airflow (`dags/dag_run_pipeline.py`)
 
-DAG quotidien (6h00) qui appelle [`src/run_daily_pipeline.py`](src/run_daily_pipeline.py) via `PythonOperator` (compatible Linux, macOS, Windows) :
+DAG quotidien (6h00) — tâches visibles dans l'UI :
 
-1. Lit la date à traiter dans `logs/pipeline_date_cursor.txt` (ou `20260429` si absent)
+`validate_date` → `ingestion_stg` (`BashOperator` → `load_data.py`) → `dbt_run` (`BashOperator`)
+
+Date métier par DagRun : **`ds_nodash`** (fourni par Airflow). Période multi-jours : **Rattrapage** (backfill) = un DagRun par jour, séquentiel (`depends_on_past=True`, `max_active_runs=1`).
+
+Comportement par DagRun :
+
+1. Récupère la date via `ds_nodash` (ex. `20260429`)
 2. Vérifie que `BDD_HOSPITAL_{date}/` contient les 7 fichiers `.txt`
-3. Si fichiers absents : **échec explicite**, pas de load/dbt, curseur inchangé
-4. Sinon : `load_data_day` → `dbt run` → curseur avancé de **+1 jour**
+3. Si fichiers absents : **échec explicite**, pas de load/dbt
+4. Sinon : `load_data_day` → `dbt run`
 
-Lancement Airflow : `./run_airflow.sh` (Linux/macOS), `.\run_airflow.ps1` (Windows), ou `uv run airflow standalone` avec `AIRFLOW_HOME` = racine du repo. Voir [README.md](README.md).
+[`src/run_daily_pipeline.py`](src/run_daily_pipeline.py) est **indépendant** du DAG (date fixe `LOCAL_RUN_DATE` dans le code). [`src/pipeline_common.py`](src/pipeline_common.py) fournit uniquement les utilitaires techniques (`run_ingestion`, `run_dbt`, binaires).
 
-Log orchestrateur : `logs/run_daily_pipeline.log`
+Lancement Airflow : `./run_airflow.sh` (Linux/macOS), `.\run_airflow.ps1` (Windows). UI : http://127.0.0.1:8080. Voir [README.md](README.md).
+
+Log simulateur local : `logs/run_daily_pipeline.log`
 
 Logs dbt (`dbt run`) : `logs/dbt.log` (config `log-path: ../logs` dans `dbt_hopital/dbt_project.yml`).
-
-Réinitialiser le parcours : supprimer `logs/pipeline_date_cursor.txt`.
 
 ---
 
