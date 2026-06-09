@@ -157,7 +157,7 @@ Arguments CLI :
 
 ## Orchestration Airflow (`dags/dag_run_pipeline.py`)
 
-DAG quotidien (6h00) — tâches visibles dans l'UI :
+DAG sans planification automatique — déclenchement manuel ou rattrapage uniquement. Tâches visibles dans l'UI :
 
 `validate_date` → `ingestion_stg` (`BashOperator` → `load_data.py`) → `dbt_run` (`BashOperator`)
 

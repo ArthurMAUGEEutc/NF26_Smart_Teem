@@ -121,7 +121,7 @@ Pour traiter un autre jour : modifier `LOCAL_RUN_DATE` dans `src/run_daily_pipel
 
 ## 7. Airflow (orchestration)
 
-Le DAG [`dags/dag_run_pipeline.py`](dags/dag_run_pipeline.py) planifie le pipeline à **6h00** avec des tâches visibles dans l'UI :
+Le DAG [`dags/dag_run_pipeline.py`](dags/dag_run_pipeline.py) n'a **pas de planification automatique** : il est déclenché uniquement par **exécution manuelle** ou **rattrapage** (backfill). Tâches visibles dans l'UI :
 
 `validate_date` → `ingestion_stg` → `dbt_run`
 

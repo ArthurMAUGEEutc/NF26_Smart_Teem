@@ -1,9 +1,10 @@
 """
 DAG : dag_run_pipeline
-Ordonnancement quotidien du pipeline hospitalier :
+Pipeline hospitalier (sans planification automatique) :
   1. Ingestion STG  → load_data.py
   2. Transformation → dbt run
 
+Déclenchement : exécution manuelle ou rattrapage (backfill) uniquement.
 Date métier : ds_nodash (data_interval_start) fourni par Airflow.
 Période multi-jours : mode Rattrapage (backfill) = un DagRun par jour.
 """
@@ -53,7 +54,7 @@ with DAG(
     description="Ingestion STG + alimentation datawarehouse (dbt)",
     default_args=default_args,
     start_date=datetime(2026, 4, 29),
-    schedule="0 6 * * *",
+    schedule=None,
     catchup=False,
     max_active_runs=1,
     tags=["hopital", "ingestion", "dbt"],
