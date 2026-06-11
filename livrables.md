@@ -3,6 +3,11 @@
 Ces livrables finaux contiendront l'ensemble de vos algorithmes depuis le début du projet ainsi que vos slides de soutenance.
 Le rendu sera un dossier .zip qui pourra contenir les dernières versions de chaque livrable. Ce seront ces derniers livrables qui seront considérés pour l'évaluation. 
 
+=> Ajouter un Readme avec : 
+    - Une description globale du projet
+    - Un schéma de l'arborescence
+    - Un tuto pour lancer les fonctions principales (install_sid + lancer les dags d'ingestion + exporter les données pour PowerBI)
+
 
 # Questions auxquelles doivent répondre les indicateurs du Lot 4 
 
