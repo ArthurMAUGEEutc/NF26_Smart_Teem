@@ -1,5 +1,4 @@
--- Script de test : vérifie l'état des tables après les opérations
--- Affiche le nombre de tables et de lignes par base/schéma (hors BKP_)
+-- Comptage tables et lignes par base (hors BKP_)
 
 SELECT TABLE_CATALOG AS base_de_donnees,
        TABLE_SCHEMA AS schema,
@@ -15,9 +14,3 @@ FROM (
     SELECT TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, ROW_COUNT FROM WRK.INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME NOT LIKE 'BKP_%'
 )
 ORDER BY TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME;
-
--- EMPTY : vider la table WRK_TRET
-TRUNCATE TABLE WRK_TRET;
-
--- REMOVE : supprimer la table WRK_TRET
-DROP TABLE WRK_TRET;

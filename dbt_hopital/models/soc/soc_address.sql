@@ -17,7 +17,7 @@ SELECT
     w.END_VALD_DTTM,
     '{{ invocation_id }}' AS EXEC_ID
 FROM {{ ref('wrk_address') }} w
-JOIN SOC.PUBLIC.R_PART p
+JOIN {{ ref('soc_part') }} p
   ON p.SRC_ID  = w.SRC_ID
  AND p.SRC_TYP = 'Patient'
 

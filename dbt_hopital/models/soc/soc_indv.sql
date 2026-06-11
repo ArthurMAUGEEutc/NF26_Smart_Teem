@@ -4,10 +4,7 @@
     pre_hook   = "{{ start_tracking(this.name) }}",
     post_hook  = "{{ end_tracking(this.name) }}"
 ) }}
- 
--- Jointure avec R_PART pour récupérer le PART_ID
--- PERSONNEL : jointure sur SRC_ID = ID_PERSONNEL et SRC_TYP = FONCTION_PERSONNEL
--- PATIENT : jointure sur SRC_ID = ID_PATIENT  et SRC_TYP = 'Patient'
+
 SELECT
     rp.PART_ID,
     w.INDV_NAME,
@@ -21,6 +18,6 @@ SELECT
     w.SOCL_NUM,
     '{{ invocation_id }}'   AS EXEC_ID
 FROM {{ ref('wrk_indv') }} w
-INNER JOIN SOC.PUBLIC.R_PART rp
+INNER JOIN {{ ref('soc_part') }} rp
     ON  rp.SRC_ID  = w.SRC_ID
     AND rp.SRC_TYP = w.SRC_TYP

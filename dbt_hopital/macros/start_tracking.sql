@@ -1,6 +1,5 @@
 {% macro start_tracking(model_name) %}
 
-    -- Insertion dans T_SUIV_RUN (si pas déjà fait pour ce run)
     INSERT INTO TCH.PUBLIC.T_SUIV_RUN (
         EXEC_ID,
         RUN_STRT_DTTM,
@@ -16,7 +15,6 @@
         WHERE EXEC_ID = '{{ invocation_id }}'
     );
 
-    -- Insertion dans T_SUIV_TRMT pour ce model
     INSERT INTO TCH.PUBLIC.T_SUIV_TRMT (
         EXEC_ID,
         SCRPT_NAME,

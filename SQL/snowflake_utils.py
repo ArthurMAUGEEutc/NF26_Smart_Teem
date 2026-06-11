@@ -1,4 +1,4 @@
-"""Utilitaires partagés pour les scripts Python du SID (Workspace + PC local)."""
+"""Connexion Snowflake, logging et exécution SQL pour les scripts Python du SID."""
 
 from __future__ import annotations
 
@@ -29,6 +29,9 @@ CONNECT_KEYS = frozenset(
     }
 )
 LOG_DIR = PROJECT_ROOT / "logs"
+INSTALL_LOG = "installation.log"
+PIPELINE_LOG = "pipeline.log"
+# Répertoire données locales (surcharge possible via STG_DATA_DIR)
 DATA_DIR = PROJECT_ROOT / "Inputs_Projets_NF26_AI07" / "Data Hospital"
 HISTORY_DIR = PROJECT_ROOT / "HISTORY"
 
@@ -56,25 +59,20 @@ def running_in_notebook() -> bool:
 
 
 def cli_exit(code: int = 0) -> None:
-    """
-    Termine le script en CLI sans lever SystemExit dans un notebook.
-    En terminal : sys.exit(code). En notebook : retour silencieux.
-    """
+    """sys.exit en terminal ; no-op en notebook (%run, cellule Python)."""
     if running_in_notebook():
         return
     sys.exit(code)
 
 
 class WorkspaceFileHandler(logging.Handler):
-    """
-    Buffer mémoire + écriture unique à la fermeture (FS Workspace Snowflake).
-    Évite les échecs os.write répétés et les fichiers log vides/tronqués.
-    """
+    """Buffer mémoire ; écriture unique à la fermeture (compatibilité Workspace Snowflake)."""
 
-    def __init__(self, log_path: Path):
+    def __init__(self, log_path: Path, truncate: bool = False):
         super().__init__(level=logging.NOTSET)
         self.log_path = Path(log_path)
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
+        self.truncate = truncate
         self._buffer: list[str] = []
         self.write_failed = False
         self.lines_written = 0
@@ -96,11 +94,9 @@ class WorkspaceFileHandler(logging.Handler):
         if not self._buffer:
             return
         try:
-            fd = os.open(
-                self.log_path,
-                os.O_WRONLY | os.O_CREAT | os.O_APPEND,
-                mode=0o644,
-            )
+            flags = os.O_WRONLY | os.O_CREAT
+            flags |= os.O_TRUNC if self.truncate else os.O_APPEND
+            fd = os.open(self.log_path, flags, mode=0o644)
             try:
                 os.write(fd, "".join(self._buffer).encode("utf-8"))
             finally:
@@ -159,7 +155,12 @@ def verify_log_file(
         )
 
 
-def setup_logger(name: str, log_filename: str) -> logging.Logger:
+def setup_logger(
+    name: str,
+    log_filename: str,
+    *,
+    truncate: bool = False,
+) -> logging.Logger:
     """Configure un logger avec fichier bufferisé + stdout."""
     silence_external_loggers()
     LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -169,7 +170,7 @@ def setup_logger(name: str, log_filename: str) -> logging.Logger:
     log.propagate = False
     log.handlers.clear()
 
-    file_handler = WorkspaceFileHandler(LOG_DIR / log_filename)
+    file_handler = WorkspaceFileHandler(LOG_DIR / log_filename, truncate=truncate)
     file_handler.setFormatter(LOG_FORMAT)
     log.addHandler(file_handler)
 
@@ -296,9 +297,7 @@ def _connect_local(log: logging.Logger, profile: dict):
 
 
 def get_snowflake_connection(logger: logging.Logger | None = None):
-    """
-    Connexion Snowflake via dbt_hopital/profiles.yml (cibles local / workspace).
-    """
+    """Connexion via dbt_hopital/profiles.yml (cible local ou workspace)."""
     silence_external_loggers()
     log = logger or logging.getLogger(__name__)
     target = resolve_target()
@@ -311,11 +310,7 @@ def get_snowflake_connection(logger: logging.Logger | None = None):
 
 
 def parse_statements(sql_text: str) -> list[str]:
-    """
-    Découpe le fichier SQL en statements individuels.
-    Ignore les commentaires -- et respecte les ; à l'intérieur des chaînes
-    (ex. FIELD_DELIMITER = ';') pour ne pas les confondre avec des séparateurs.
-    """
+    """Découpe un script SQL en statements (ignore --, respecte les ; dans les chaînes)."""
     sql_text = re.sub(r"--[^\n]*", "", sql_text)
 
     statements: list[str] = []

@@ -1,6 +1,4 @@
--- ============================================================
--- Stage interne et file format pour le chargement STG
--- ============================================================
+-- Stage et file format pour le chargement STG
 
 USE ROLE ACCOUNTADMIN;
 USE DATABASE STG;

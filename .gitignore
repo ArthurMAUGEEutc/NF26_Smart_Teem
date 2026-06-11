@@ -43,6 +43,7 @@ yarn-error.log
 # Logs
 *.log
 logs
+.airflow/
 
 # Historisation snapshots STG
 HISTORY/

@@ -1,16 +1,6 @@
 """
-install_sid.py — Script d'installation du SID (Système d'Information Décisionnel)
-- Idempotent : peut être exécuté plusieurs fois sans erreur
-- Trace toutes les opérations dans logs/installation.log
-- Les bases de données ne sont pas recréées si elles existent déjà
-- Les tables STG sont recréées (CREATE OR REPLACE)
-- Les tables SOC et TCH ne sont pas recréées si elles existent déjà
-
-Exécution :
-  python SQL/install_sid.py
-  %run SQL/install_sid.py   (notebook Workspace)
-
-Connexion : dbt_hopital/profiles.yml (cible workspace ou local selon l'environnement).
+Installation idempotente du SID : bases, tables STG (REPLACE), SOC et TCH (IF NOT EXISTS).
+Journal : logs/installation.log — connexion via dbt_hopital/profiles.yml.
 """
 
 from __future__ import annotations
@@ -21,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 
 from snowflake_utils import (
+    INSTALL_LOG,
     LOG_DIR,
     SQL_DIR,
     cli_exit,
@@ -32,9 +23,9 @@ from snowflake_utils import (
 )
 
 PROJECT_ROOT, _ = resolve_project_paths()
-LOG_FILE = LOG_DIR / "installation.log"
+LOG_FILE = LOG_DIR / INSTALL_LOG
 
-logger = setup_logger("install_sid", "installation.log")
+logger = setup_logger("install_sid", INSTALL_LOG, truncate=True)
 
 SQL_SCRIPTS = [
     "create_db.sql",

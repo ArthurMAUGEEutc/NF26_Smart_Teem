@@ -1,7 +1,4 @@
--- ============================================================
--- Création des tables de la base SOC (Socle)
--- Les tables SOC ne sont PAS recréées si elles existent déjà
--- ============================================================
+-- Tables SOC (CREATE IF NOT EXISTS)
 
 USE ROLE ACCOUNTADMIN;
 
