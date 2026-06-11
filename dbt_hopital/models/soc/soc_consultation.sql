@@ -21,10 +21,10 @@ SELECT
     w.HOSP_IND,
     '{{ invocation_id }}' AS EXEC_ID
 FROM {{ ref('wrk_consultation') }} w
-JOIN SOC.PUBLIC.R_PART ps
+JOIN {{ ref('soc_part') }} ps
   ON ps.SRC_ID  = w.STFF_SRC_ID
  AND ps.SRC_TYP != 'Patient'
-JOIN SOC.PUBLIC.R_PART pp
+JOIN {{ ref('soc_part') }} pp
   ON pp.SRC_ID  = w.PATN_SRC_ID
  AND pp.SRC_TYP = 'Patient'
 

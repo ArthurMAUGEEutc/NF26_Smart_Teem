@@ -75,7 +75,7 @@ Arguments utiles :
 - `--skip-history` — désactive le snapshot avant truncate
 - `--data-dir CHEMIN` — dossier parent contenant `BDD_HOSPITAL_YYYYMMDD/`
 
-Log : `logs/load_data.log`
+Log : `logs/pipeline.log` (tronqué au trigger manuel d'un jour ; append entre DagRuns d'un backfill)
 
 ---
 
@@ -93,7 +93,7 @@ Lancer les modèles :
 uv run dbt run --project-dir dbt_hopital --profiles-dir dbt_hopital
 ```
 
-Log dbt : `logs/dbt.log` (configuré dans `dbt_hopital/dbt_project.yml`).
+Via le pipeline (`run_daily_pipeline` ou DAG), la sortie dbt est intégrée dans `logs/pipeline.log`. En CLI directe, dbt écrit sous `dbt_hopital/target/dbt_logs/`.
 
 Guide détaillé dbt : [tuto_dbt.md](tuto_dbt.md)
 
@@ -113,7 +113,7 @@ uv run python src/run_daily_pipeline.py
 2. Si fichiers absents → échec
 3. Sinon → load STG → `dbt run`
 
-Log : `logs/run_daily_pipeline.log`
+Log : `logs/pipeline.log`
 
 Pour traiter un autre jour : modifier `LOCAL_RUN_DATE` dans `src/run_daily_pipeline.py`.
 
@@ -121,14 +121,15 @@ Pour traiter un autre jour : modifier `LOCAL_RUN_DATE` dans `src/run_daily_pipel
 
 ## 7. Airflow (orchestration)
 
-Le DAG [`dags/dag_run_pipeline.py`](dags/dag_run_pipeline.py) n'a **pas de planification automatique** : il est déclenché uniquement par **exécution manuelle** ou **rattrapage** (backfill). Tâches visibles dans l'UI :
+Le DAG [`dags/dag_run_pipeline.py`](dags/dag_run_pipeline.py) utilise `schedule=@daily` avec `catchup=False` : pas de rattrapage automatique au démarrage. En pratique, le laisser **en pause** et le déclencher par **exécution manuelle** ou **backfill**. Tâches visibles dans l'UI :
 
-`validate_date` → `ingestion_stg` → `dbt_run`
+`resolve_dates` → `validate_date` → `ingestion_stg` → `dbt_run`
 
-- **Date métier** : `ds_nodash` (intervalle de données Airflow, ex. `20260429`)
-- **ingestion_stg** : `load_data.py --date …`
-- **dbt_run** : `dbt run --project-dir dbt_hopital --profiles-dir dbt_hopital`
-- **Séquence multi-jours** : `depends_on_past=True` + `max_active_runs=1` (le jour N+1 attend le succès du jour N)
+- **Date métier** : `ds_nodash` (logical date du DagRun, ex. `20260429`) — toujours la renseigner au trigger
+- **Par date** : validation fichiers → `load_data.py` → `dbt run`
+- **Période multi-jours** : backfill = un DagRun par jour, séquentiel (`max_active_runs=1`)
+- **Reprise sur erreur** : si le jour J échoue, le jour J+1 est quand même lancé ; au run J+1, les dates en échec antérieures sont retraitées avant J+1 (registre : `logs/pipeline_failed_dates.txt`)
+- **Log applicatif** : `logs/pipeline.log` (tronqué au trigger manuel d'un jour ; chaque DagRun de backfill s'ajoute avec un séparateur ; supprimer le fichier avant un nouveau backfill pour repartir à zéro)
 
 Le DAG n'appelle pas `run_daily_pipeline.py`.
 
@@ -155,6 +156,7 @@ Les scripts `run_airflow.*` configurent `AIRFLOW_HOME`, l'écoute sur `127.0.0.1
 export AIRFLOW_HOME="$(pwd)"
 export AIRFLOW__API__HOST="127.0.0.1"
 export AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS="true"
+export AIRFLOW__LOGGING__BASE_LOG_FOLDER="${AIRFLOW_HOME}/.airflow/logs"
 uv run airflow standalone
 ```
 
@@ -173,22 +175,29 @@ Interface web : **http://127.0.0.1:8080** (préférer `127.0.0.1` à `localhost`
 
 ### Déclencher le pipeline
 
-**Un seul jour** (UI : **Exécution unique**, ou CLI) :
+**Un seul jour** (UI : Trigger → **Single run** + logical date, ou CLI) :
 
 ```bash
 export AIRFLOW_HOME="$(pwd)"
-uv run airflow dags trigger dag_run_pipeline
+uv run airflow dags trigger dag_run_pipeline -l 2026-04-29
 ```
 
-**Plusieurs jours** (UI : **Rattrapage** avec plage début/fin, intervalle `[début, fin)` — le jour `fin` est exclu) :
+**Plusieurs jours** (UI : Trigger → **Backfill** avec plage début/fin ; CLI) :
 
 ```bash
 export AIRFLOW_HOME="$(pwd)"
+
+# Vérification (dry-run)
 uv run airflow backfill create --dag-id dag_run_pipeline \
-  --start-date 2026-04-29 --end-date 2026-05-03
+  --from-date 2026-04-29 --to-date 2026-05-10 --dry-run
+
+# Exécution (29/04 → 10/05 inclus ; to-date = dernier jour traité)
+uv run airflow backfill create --dag-id dag_run_pipeline \
+  --from-date 2026-04-29 --to-date 2026-05-10 \
+  --reprocess-behavior none
 ```
 
-Chaque DagRun traite un jour ; l'enchaînement est séquentiel (`depends_on_past`).
+Chaque DagRun traite la date métier de sa logical date (+ reprises des jours en échec antérieurs). L'enchaînement est séquentiel (`max_active_runs=1`).
 
 ---
 
@@ -213,7 +222,8 @@ scripts/                ← check_airflow_ui.sh / .ps1
 dags/                   ← dag_run_pipeline.py
 dbt_hopital/            ← projet dbt (models, macros, profiles.yml)
 dags/                   ← DAG Airflow
-logs/                   ← logs applicatifs (gitignoré)
+logs/                   ← installation.log + pipeline.log (+ pipeline_failed_dates.txt)
+.airflow/logs/          ← logs techniques Airflow (gitignoré)
 ```
 
 ---

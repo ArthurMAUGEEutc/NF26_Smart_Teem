@@ -12,6 +12,6 @@ SELECT
     w.WORK_END_RESN,
     '{{ invocation_id }}'   AS EXEC_ID
 FROM {{ ref('wrk_stff') }} w
-INNER JOIN SOC.PUBLIC.R_PART rp
+INNER JOIN {{ ref('soc_part') }} rp
     ON  rp.SRC_ID  = w.SRC_ID
     AND rp.SRC_TYP = w.SRC_TYP

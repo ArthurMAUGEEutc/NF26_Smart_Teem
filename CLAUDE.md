@@ -144,7 +144,7 @@ uv run dbt run --project-dir dbt_hopital --profiles-dir dbt_hopital
 Script Python qui charge les fichiers `.txt` d'**un seul jour** dans les tables STG via `PUT` + `COPY INTO` (local ou Workspace) :
 - Source : `Inputs_Projets_NF26_AI07/Data Hospital/BDD_HOSPITAL_{YYYYMMDD}/` (ou `STG_DATA_DIR`, ou `/workspace/.../data`)
 - Stage : `STG.PUBLIC.STG_LOAD_STAGE` (voir [`SQL/create_stg_stage.sql`](SQL/create_stg_stage.sql))
-- Log : `logs/load_data.log`
+- Log : `logs/pipeline.log`
 - Suivi TCH : entrées dans `TCH.PUBLIC.T_SUIV_RUN` / `T_SUIV_TRMT`
 - Historisation : snapshot STG dans `HISTORY/` avant truncate (rétention configurable, défaut 2 jours)
 
@@ -157,26 +157,26 @@ Arguments CLI :
 
 ## Orchestration Airflow (`dags/dag_run_pipeline.py`)
 
-DAG sans planification automatique — déclenchement manuel ou rattrapage uniquement. Tâches visibles dans l'UI :
+DAG `schedule=@daily`, `catchup=False` — déclenchement manuel ou backfill (DAG en pause par défaut recommandé). Tâches :
 
-`validate_date` → `ingestion_stg` (`BashOperator` → `load_data.py`) → `dbt_run` (`BashOperator`)
+`resolve_dates` → `validate_date` → `ingestion_stg` → `dbt_run` ([`src/pipeline_common.py`](src/pipeline_common.py))
 
-Date métier par DagRun : **`ds_nodash`** (fourni par Airflow). Période multi-jours : **Rattrapage** (backfill) = un DagRun par jour, séquentiel (`depends_on_past=True`, `max_active_runs=1`).
+Date métier par DagRun : **`ds_nodash`** (logical date). Période multi-jours : **backfill** = un DagRun par jour, séquentiel (`max_active_runs=1`, `depends_on_past=False`).
 
 Comportement par DagRun :
 
-1. Récupère la date via `ds_nodash` (ex. `20260429`)
-2. Vérifie que `BDD_HOSPITAL_{date}/` contient les 7 fichiers `.txt`
-3. Si fichiers absents : **échec explicite**, pas de load/dbt
-4. Sinon : `load_data_day` → `dbt run`
+1. Construit la liste des dates : échecs antérieurs (`logs/pipeline_failed_dates.txt`) + `ds_nodash`
+2. Pour chaque date : validation fichiers → `load_data_day` → `dbt run`
+3. Continue même si une reprise échoue ; le DagRun échoue seulement si `ds_nodash` échoue
+4. Si J échoue, J+1 est quand même lancé et retente J avant de traiter J+1
 
-[`src/run_daily_pipeline.py`](src/run_daily_pipeline.py) est **indépendant** du DAG (date fixe `LOCAL_RUN_DATE` dans le code). [`src/pipeline_common.py`](src/pipeline_common.py) fournit uniquement les utilitaires techniques (`run_ingestion`, `run_dbt`, binaires).
+[`src/run_daily_pipeline.py`](src/run_daily_pipeline.py) est **indépendant** du DAG (date fixe `LOCAL_RUN_DATE`). [`src/pipeline_common.py`](src/pipeline_common.py) et [`src/pipeline_failed_dates.py`](src/pipeline_failed_dates.py) centralisent l'exécution et la reprise.
 
 Lancement Airflow : `./run_airflow.sh` (Linux/macOS), `.\run_airflow.ps1` (Windows). UI : http://127.0.0.1:8080. Voir [README.md](README.md).
 
-Log simulateur local : `logs/run_daily_pipeline.log`
+Logs pipeline (DAG, simulateur local, `load_data.py` CLI) : `logs/pipeline.log` (tronqué au trigger manuel d'un jour ou exécution locale ; append entre DagRuns d'un backfill).
 
-Logs dbt (`dbt run`) : `logs/dbt.log` (config `log-path: ../logs` dans `dbt_hopital/dbt_project.yml`).
+Logs Airflow (UI) : `.airflow/logs/` (hors dossier `logs/` applicatif).
 
 ---
 

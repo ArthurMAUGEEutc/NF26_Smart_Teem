@@ -1,4 +1,4 @@
--- Création des bases de données du projet NF26
+-- Bases STG, SOC, TCH, WRK
 USE ROLE ACCOUNTADMIN;
 
 CREATE DATABASE IF NOT EXISTS STG;

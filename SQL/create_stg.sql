@@ -1,7 +1,4 @@
--- ============================================================
--- Création des tables de la base STG (Staging)
--- Les tables STG sont recréées à chaque installation (idempotent)
--- ============================================================
+-- Tables STG (CREATE OR REPLACE à chaque installation)
 
 USE ROLE ACCOUNTADMIN;
 USE DATABASE STG;

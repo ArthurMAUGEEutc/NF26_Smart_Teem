@@ -98,4 +98,5 @@ Voir [README.md](README.md) pour Airflow et les variables d'environnement (`STG_
 - **`command not found: dbt`** → relance `uv sync`, utilise `uv run dbt`
 - **Erreur de permission Snowflake** → vérifie que ton rôle est bien `ACCOUNTADMIN`
 - **Scripts Python (`install_sid`, `load_data`)** → utilisent le même `dbt_hopital/profiles.yml` via `snowflake_utils`
-- **Logs dbt** → `logs/dbt.log` à la racine du projet (pas dans `dbt_hopital/logs/`)
+- **Logs pipeline** → `logs/pipeline.log` (ingestion STG + dbt via DAG ou `run_daily_pipeline.py`)
+- **Logs dbt internes** (CLI directe) → `dbt_hopital/target/dbt_logs/`

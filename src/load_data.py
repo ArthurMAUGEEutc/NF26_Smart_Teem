@@ -1,18 +1,13 @@
 """
-Chargement des fichiers plats hospitaliers vers STG (Snowflake)
-
-Exécution locale ou Workspace :
-  python src/load_data.py [--date YYYYMMDD] [--data-dir CHEMIN]
-
-Flux : fichiers .txt → PUT (stage interne éphémère) → COPY INTO STG → REMOVE stage.
-Connexion : dbt_hopital/profiles.yml (cible local ou workspace selon l'environnement).
-Log : logs/load_data.log
+Chargement quotidien des fichiers plats hospitaliers vers STG (PUT → COPY INTO).
+Connexion : profiles.yml — log : logs/pipeline.log.
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
+import logging
 import os
 import re
 import shutil
@@ -45,12 +40,11 @@ def resolve_sql_dir() -> Path:
 
 sys.path.insert(0, str(resolve_sql_dir()))
 
-from snowflake_utils import (  
+from snowflake_utils import (
+    DATA_DIR,
     HISTORY_DIR,
-    LOG_DIR,
-    LOG_FORMAT,
+    PIPELINE_LOG,
     SQL_DIR,
-    WorkspaceFileHandler,
     cli_exit,
     execute_sql_file,
     get_snowflake_connection,
@@ -60,10 +54,9 @@ from snowflake_utils import (
     verify_log_file,
 )
 
-logger = setup_logger("load_data", "load_data.log")
+logger: logging.Logger | None = None
 
 DEFAULT_LOAD_DATE = "20260429"
-LOG_BASENAME = "load_data.log"
 
 SCRPT_NAME = "load_data"
 STAGE = "STG.PUBLIC.STG_LOAD_STAGE"
@@ -97,14 +90,6 @@ COPY_SELECT: dict[str, str] = {
 }
 
 
-def _project_root() -> Path:
-    return resolve_sql_dir().parent
-
-
-def _project_data_dir() -> Path:
-    return _project_root() / "Inputs_Projets_NF26_AI07" / "Data Hospital"
-
-
 def _workspace_data_dir() -> Path:
     """Répertoire data/ dans le Workspace Snowflake (/workspace/<repo>/data)."""
     workspace_root = Path("/workspace")
@@ -125,13 +110,13 @@ def _workspace_data_dir() -> Path:
 
 
 def _default_data_dir() -> Path:
-    """STG_DATA_DIR, puis Inputs projet (local) ou /workspace/.../data (workspace)."""
+    """STG_DATA_DIR, sinon data/ Workspace ou répertoire local par défaut."""
     env = os.getenv("STG_DATA_DIR")
     if env:
         return Path(env).expanduser().resolve()
     if is_snowflake_workspace():
         return _workspace_data_dir()
-    return _project_data_dir().resolve()
+    return DATA_DIR.resolve()
 
 
 def validate_date(date: str) -> str:
@@ -287,19 +272,21 @@ def load_data_day(
     data_dir: Path | str | None = None,
     retention_days: int | None = None,
     skip_history: bool = False,
+    log_truncate: bool = False,
+    finalize_log_file: bool | None = None,
 ) -> bool:
-    """
-    Charge les fichiers du jour `date` (YYYYMMDD) dans STG.
-    Retourne True si succès, False sinon.
-    """
+    """Charge les fichiers du jour (YYYYMMDD) dans STG. Retourne True si succès."""
+    global logger
     date = validate_date(date)
     resolved_data_dir = (
         Path(data_dir).expanduser().resolve() if data_dir else _default_data_dir()
     )
     if retention_days is None:
         retention_days = int(os.getenv("STG_HISTORY_RETENTION_DAYS", "2"))
+    if finalize_log_file is None:
+        finalize_log_file = log_truncate
 
-    _ensure_file_handler()
+    logger = _ensure_file_handler(log_truncate)
     folder = validate_source_files(date, resolved_data_dir)
     exec_id = str(uuid4())
     start = datetime.now()
@@ -367,30 +354,30 @@ def load_data_day(
     logger.info(f"FIN CHARGEMENT STG — {status} — durée {duration}")
     logger.info("=" * 60)
     print(f"[load_data] FIN — {status} — durée {duration}")
-    finalize_log()
+    if finalize_log_file:
+        finalize_log()
     return success
 
 
-def _ensure_file_handler() -> None:
+def _ensure_file_handler(log_truncate: bool = False) -> logging.Logger:
     """Réouvre le handler fichier après une exécution précédente (notebook)."""
-    fh = getattr(logger, "file_handler", None)
+    global logger
+    active = logger or logging.getLogger("pipeline")
+    fh = getattr(active, "file_handler", None)
     if fh is not None and not getattr(fh, "_closed", False):
-        return
-    for h in list(logger.handlers):
-        if isinstance(h, WorkspaceFileHandler):
-            logger.removeHandler(h)
-    fh = WorkspaceFileHandler(LOG_DIR / LOG_BASENAME)
-    fh.setFormatter(LOG_FORMAT)
-    logger.addHandler(fh)
-    logger.file_handler = fh  # type: ignore[attr-defined]
+        return active
+
+    logger = setup_logger("pipeline", PIPELINE_LOG, truncate=log_truncate)
+    return logger
 
 
 def finalize_log() -> None:
     """Écrit le buffer log sur disque et affiche le résumé."""
-    file_handler = getattr(logger, "file_handler", None)
+    active = logger or logging.getLogger("pipeline")
+    file_handler = getattr(active, "file_handler", None)
     if file_handler and not getattr(file_handler, "_closed", False):
         file_handler.close()
-    verify_log_file(LOG_BASENAME, "load_data", handler=file_handler)
+    verify_log_file(PIPELINE_LOG, "pipeline", handler=file_handler)
 
 
 def _resolve_load_date(cli_date: str | None) -> str:
@@ -452,9 +439,10 @@ def main(argv: list[str] | None = None) -> int:
             data_dir=load_data_dir,
             retention_days=args.retention_days,
             skip_history=args.skip_history,
+            log_truncate=True,
         )
     except (ValueError, FileNotFoundError, RuntimeError) as e:
-        logger.error(str(e))
+        _ensure_file_handler(log_truncate=True).error(str(e))
         print(f"[load_data] ERREUR : {e}")
         finalize_log()
         return 1
