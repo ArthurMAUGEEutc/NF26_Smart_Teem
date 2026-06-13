@@ -177,7 +177,8 @@ def run_dbt(
 
 
 def resolve_dates_for_run(current_date: str) -> list[str]:
-    """Dates à traiter : reprises en échec antérieures + date du DagRun."""
+    """Construction de la liste des dates à traiter 
+    avec reprises en échec antérieures + date du DagRun."""
     from pipeline_failed_dates import get_pending_before
 
     dates = get_pending_before(current_date)
