@@ -1,3 +1,5 @@
+TODO supprimer le Claude.md du rendu
+
 # Livrables Finaux : Date limite mardi 16/06 à 23h59.
 
 Ces livrables finaux contiendront l'ensemble de vos algorithmes depuis le début du projet ainsi que vos slides de soutenance.

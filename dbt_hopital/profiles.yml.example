@@ -16,7 +16,7 @@ dbt_hopital:
       account: "VOTRE_ACCOUNT"         # ex. WOALAUR-YB99371
       user: "VOTRE_USER"               # login Snowflake 
       authenticator: snowflake         # ou externalbrowser si SSO/SAML activé sur le compte
-      password: "VOTRE_MOT_DE_PASSE"  # à remplir 
+      password: "VOTRE_MOT_DE_PASSE"  # à remplir ; commenter si authenticator: externalbrowser
       role: ACCOUNTADMIN
       warehouse: COMPUTE_WH
       database: SOC
