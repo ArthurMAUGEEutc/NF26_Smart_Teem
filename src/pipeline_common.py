@@ -8,6 +8,7 @@ import re
 import shutil
 import subprocess
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
 
 ANSI_ESCAPE = re.compile(r"\x1B\[[0-9;]*m")
@@ -176,14 +177,46 @@ def run_dbt(
     return result.returncode
 
 
-def resolve_dates_for_run(current_date: str) -> list[str]:
-    """Construction de la liste des dates à traiter 
-    avec reprises en échec antérieures + date du DagRun."""
+def iter_date_range(start: str, end: str) -> list[str]:
+    """Liste des jours YYYYMMDD entre start et end inclus."""
+    from load_data import validate_date
+
+    validate_date(start)
+    validate_date(end)
+    d0 = datetime.strptime(start, "%Y%m%d")
+    d1 = datetime.strptime(end, "%Y%m%d")
+    if d1 < d0:
+        raise ValueError(f"date_fin {end} antérieure à date_debut {start}")
+
+    dates: list[str] = []
+    cur = d0
+    while cur <= d1:
+        dates.append(cur.strftime("%Y%m%d"))
+        cur += timedelta(days=1)
+    return dates
+
+
+def resolve_dates_for_run(
+    anchor_date: str,
+    date_debut: str | None = None,
+    date_fin: str | None = None,
+) -> list[str]:
+    """
+    Dates à traiter :
+    - si date_debut/date_fin fournis : période demandée + reprises en échec antérieures ;
+    - sinon : anchor_date + reprises en échec antérieures.
+    """
     from pipeline_failed_dates import get_pending_before
 
-    dates = get_pending_before(current_date)
-    if current_date not in dates:
-        dates.append(current_date)
+    if date_debut:
+        end = date_fin or date_debut
+        period = iter_date_range(date_debut, end)
+        pending = get_pending_before(date_debut)
+        return sorted(set(pending + period))
+
+    dates = get_pending_before(anchor_date)
+    if anchor_date not in dates:
+        dates.append(anchor_date)
     return sorted(set(dates))
 
 

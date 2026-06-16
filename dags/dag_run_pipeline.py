@@ -1,15 +1,18 @@
 """
-Pipeline quotidien : ingestion STG puis dbt run.
-Date métier = ds_nodash ; reprise des échecs antérieurs au run suivant.
+Pipeline manuel : ingestion STG puis dbt run.
+Aucune exécution automatique (schedule=None).
+Déclencher depuis l'UI avec les paramètres date_debut / date_fin.
 """
 
 import os
+import re
 import sys
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from airflow import DAG
 from airflow.exceptions import AirflowException
 from airflow.providers.standard.operators.python import PythonOperator
+from airflow.sdk import Param
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -30,21 +33,50 @@ from pipeline_common import (  # noqa: E402
 )
 
 
-def _pull_dates(ti, current_date: str) -> list[str]:
+def _to_yyyymmdd(value: date | str | None) -> str:
+    """Convertit une date UI (YYYY-MM-DD, date ou YYYYMMDD) en YYYYMMDD."""
+    if value is None:
+        return ""
+    if isinstance(value, date):
+        return value.strftime("%Y%m%d")
+    text = str(value).strip()
+    if not text:
+        return ""
+    if re.fullmatch(r"\d{8}", text):
+        return text
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", text):
+        return text.replace("-", "")
+    raise AirflowException(f"Date invalide : {value!r} (attendu YYYY-MM-DD)")
+
+
+def _run_period(context) -> tuple[str, str, str]:
+    """Retourne (date_debut, date_fin, date_principale) depuis les params du trigger."""
+    params = context.get("params") or {}
+    debut = _to_yyyymmdd(params.get("date_debut"))
+    fin = _to_yyyymmdd(params.get("date_fin"))
+    if not debut:
+        raise AirflowException("Paramètre date_debut obligatoire")
+    if not fin:
+        fin = debut
+    return debut, fin, fin
+
+
+def _pull_dates(ti, debut: str, fin: str) -> list[str]:
     dates = ti.xcom_pull(task_ids="resolve_dates")
-    return dates if dates else [current_date]
+    if dates:
+        return dates
+    return resolve_dates_for_run(fin, date_debut=debut, date_fin=fin)
 
 
 def _task_resolve_dates(**context) -> list[str]:
-    current_date = context["ds_nodash"]
+    debut, fin, anchor = _run_period(context)
     truncate = should_truncate_pipeline_log(**context)
     log = get_pipeline_logger(truncate=truncate)
-    dates = resolve_dates_for_run(current_date)
+    dates = resolve_dates_for_run(anchor, date_debut=debut, date_fin=fin)
     run_id = getattr(context.get("dag_run"), "run_id", "?")
     log.info("=" * 60)
-    if not truncate:
-        log.info(f"DAG RUN (backfill) — run_id={run_id}")
-    log.info(f"DÉMARRAGE DAG — date métier={current_date}")
+    log.info(f"DÉMARRAGE DAG — run_id={run_id}")
+    log.info(f"Période demandée : {debut} → {fin} (date principale={anchor})")
     log.info(f"Dates à traiter : {dates}")
     log.info("=" * 60)
     finalize_pipeline_log(log)
@@ -53,14 +85,14 @@ def _task_resolve_dates(**context) -> list[str]:
 
 def _task_validate_date(**context) -> dict[str, bool]:
     ti = context["ti"]
-    current_date = context["ds_nodash"]
-    dates = _pull_dates(ti, current_date)
+    debut, fin, anchor = _run_period(context)
+    dates = _pull_dates(ti, debut, fin)
     log = get_pipeline_logger(truncate=False)
     results = validate_dates(dates, logger=log)
-    if not results.get(current_date, False):
+    if not results.get(anchor, False):
         finalize_pipeline_log(log)
         raise AirflowException(
-            f"Validation échouée pour la date métier {current_date}"
+            f"Validation échouée pour la date principale {anchor}"
         )
     finalize_pipeline_log(log)
     return results
@@ -68,21 +100,21 @@ def _task_validate_date(**context) -> dict[str, bool]:
 
 def _task_ingestion_stg(**context) -> dict[str, bool]:
     ti = context["ti"]
-    current_date = context["ds_nodash"]
-    dates = _pull_dates(ti, current_date)
+    debut, fin, anchor = _run_period(context)
+    dates = _pull_dates(ti, debut, fin)
     validation = ti.xcom_pull(task_ids="validate_date") or {}
     dates_to_load = [d for d in dates if validation.get(d, True)]
 
     log = get_pipeline_logger(truncate=False)
     results = run_ingestion_for_dates(dates_to_load, logger=log)
-    if not results.get(current_date, False):
+    if not results.get(anchor, False):
         failed_retries = [
-            d for d, ok in results.items() if not ok and d != current_date
+            d for d, ok in results.items() if not ok and d != anchor
         ]
         detail = f" reprises en échec : {failed_retries}" if failed_retries else ""
         finalize_pipeline_log(log)
         raise AirflowException(
-            f"Ingestion STG échouée pour la date métier {current_date}.{detail}"
+            f"Ingestion STG échouée pour la date principale {anchor}.{detail}"
         )
     finalize_pipeline_log(log)
     return results
@@ -90,23 +122,23 @@ def _task_ingestion_stg(**context) -> dict[str, bool]:
 
 def _task_dbt_run(**context) -> None:
     ti = context["ti"]
-    current_date = context["ds_nodash"]
-    dates = _pull_dates(ti, current_date)
+    debut, fin, anchor = _run_period(context)
+    dates = _pull_dates(ti, debut, fin)
     ingestion_results = ti.xcom_pull(task_ids="ingestion_stg") or {}
 
     log = get_pipeline_logger(truncate=False)
     results = run_dbt_for_dates(dates, ingestion_results, logger=log)
-    if not results.get(current_date, False):
+    if not results.get(anchor, False):
         failed_retries = [
-            d for d, ok in results.items() if not ok and d != current_date
+            d for d, ok in results.items() if not ok and d != anchor
         ]
         detail = f" reprises en échec : {failed_retries}" if failed_retries else ""
         finalize_pipeline_log(log)
         raise AirflowException(
-            f"dbt run échoué pour la date métier {current_date}.{detail}"
+            f"dbt run échoué pour la date principale {anchor}.{detail}"
         )
     log.info("=" * 60)
-    log.info(f"FIN DAG — date métier={current_date} — SUCCÈS")
+    log.info(f"FIN DAG — période {debut} → {fin} — SUCCÈS")
     log.info("=" * 60)
     finalize_pipeline_log(log)
 
@@ -121,12 +153,25 @@ default_args = {
 
 with DAG(
     dag_id="dag_run_pipeline",
-    description="Ingestion STG + alimentation datawarehouse (dbt)",
+    description="Ingestion STG + alimentation datawarehouse (dbt) — déclenchement manuel",
     default_args=default_args,
     start_date=datetime(2026, 4, 29),
-    schedule="@daily",
+    schedule=None,
     catchup=False,
     max_active_runs=1,
+    params={
+        "date_debut": Param(
+            type="string",
+            format="date",
+            description="Date de début",
+        ),
+        "date_fin": Param(
+            type=["string", "null"],
+            format="date",
+            default=None,
+            description="Date de fin (vide = même jour que le début)",
+        ),
+    },
     tags=["hopital", "ingestion", "dbt"],
 ) as dag:
 
