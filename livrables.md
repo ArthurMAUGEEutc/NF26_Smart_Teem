@@ -1,4 +1,10 @@
-TODO supprimer le Claude.md du rendu
+TODO :
+- supprimer le Claude.md du rendu
+- clean le code
+- voir quels fichiers on inclu dans le zip final
+- clean powerbi
+- finir les slides 
+- vérifier que la démo marche de A à Z
 
 # Livrables Finaux : Date limite mardi 16/06 à 23h59.
 
