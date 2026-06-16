@@ -1,8 +1,6 @@
 TODO :
-- supprimer le Claude.md du rendu
 - clean le code
-- voir quels fichiers on inclu dans le zip final
-- clean powerbi
+- voir quels fichiers on inclu dans le zip final (supprimer le Claude.md du rendu)
 - finir les slides 
 - vérifier que la démo marche de A à Z
 
